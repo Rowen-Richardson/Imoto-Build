@@ -4,13 +4,29 @@ import type React from "react"
 
 import { Wifi, Car, Thermometer, Clock, ShoppingBag, Shield, Heart, Phone, Mail } from "lucide-react"
 import type { Vehicle } from "@/lib/data"
+import { Header } from "./ui/header" // Import Header
+
+// UserProfile type is not exported from lib/data, defining it here based on usage
+interface UserProfile {
+  email: string
+  profilePic?: string
+  firstName?: string
+  lastName?: string
+  phone?: string
+  suburb?: string
+  city?: string
+  province?: string
+  loginMethod?: 'email' | 'google' | 'facebook' | 'apple'
+}
 
 interface VehicleDetailsProps {
   vehicle: Vehicle
   onBack: () => void
+  // Add user prop if needed for Header, assuming null for now
+  user: UserProfile | null // Corrected type to UserProfile | null
 }
 
-export default function VehicleDetails({ vehicle, onBack }: VehicleDetailsProps) {
+export default function VehicleDetails({ vehicle, onBack, user }: VehicleDetailsProps) { // Add user to destructured props
   const [showContactForm, setShowContactForm] = useState(false)
   const [email, setEmail] = useState("")
   const [message, setMessage] = useState("")
@@ -46,45 +62,58 @@ export default function VehicleDetails({ vehicle, onBack }: VehicleDetailsProps)
   }
 
   return (
-    <div className="min-h-screen">
-      {/* Header Section with Back Button and Price */}
-      <section className="px-6 pt-6 md:pt-10">
-        <div className="max-w-7xl mx-auto flex justify-between items-center">
-          <button
-            onClick={onBack}
-            className="inline-flex items-center text-[#FF6700] dark:text-[#FF7D33] hover:underline"
-          >
-            &larr; Back to Listings
-          </button>
-          <p className="text-[#FF6700] dark:text-[#FF7D33] text-2xl md:text-3xl font-bold">
-            {vehicle.price}
-          </p>
-        </div>
-      </section>
+    <div className="min-h-screen bg-[var(--light-bg)] dark:bg-[var(--dark-bg)] flex flex-col">
+      {/* Add Header component */}
+      <Header
+        user={user} // Pass the user prop
+        onLoginClick={() => alert("Login from Vehicle Details not implemented")} // Placeholder
+        onDashboardClick={() => alert("Dashboard from Vehicle Details not implemented")} // Placeholder
+        onGoHome={onBack} // Go back to the main CarMarketplace view
+        onShowAllCars={onBack} // Go back to the main CarMarketplace view
+        onGoToSellPage={() => alert("Sell Page from Vehicle Details not implemented")} // Placeholder
+        onSignOut={() => alert("Sign Out from Vehicle Details not implemented")} // Placeholder
+        transparent={false}
+      />
 
-      {/* Image Gallery */}
-      <div className="px-6 max-w-7xl mx-auto mt-4">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="md:col-span-2 h-[400px] overflow-hidden rounded-lg">
-            <img
-              src={vehicle.image || "https://via.placeholder.com/600/111/fff?text=Luxury+Vehicle"}
-              alt={`${vehicle.make} ${vehicle.model}`}
-              className="w-full h-full object-cover"
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-4 h-[400px]">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="overflow-hidden rounded-lg">
-                <img
-                  src="https://via.placeholder.com/600/111/fff?text=Luxury+Vehicle"
-                  alt="Vehicle detail"
-                  className="w-full h-full object-cover"
-                />
-              </div>
-            ))}
+      {/* Main Content Area */}
+      <div className="flex-1 px-6 pb-6 overflow-auto pt-20">
+        {/* Header Section with Back Button and Price */}
+        <section className="max-w-7xl mx-auto flex justify-between items-center mb-4">
+            <button
+              onClick={onBack}
+              className="inline-flex items-center text-[#FF6700] dark:text-[#FF7D33] hover:underline"
+            >
+              &larr; Back to Listings
+            </button>
+            <p className="text-[#FF6700] dark:text-[#FF7D33] text-2xl md:text-3xl font-bold">
+              {vehicle.price}
+            </p>
+        </section>
+
+        {/* Image Gallery */}
+        <div className="max-w-7xl mx-auto mt-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="md:col-span-2 h-[400px] overflow-hidden rounded-lg">
+              <img
+                src={vehicle.image || "https://via.placeholder.com/600/111/fff?text=Luxury+Vehicle"}
+                alt={`${vehicle.make} ${vehicle.model}`}
+                className="w-full h-full object-cover"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4 h-[400px]">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="overflow-hidden rounded-lg">
+                  <img
+                    src="https://via.placeholder.com/600/111/fff?text=Luxury+Vehicle"
+                    alt="Vehicle detail"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              ))}
+            </div>
           </div>
         </div>
-      </div>
+      </div> {/* Added missing closing div for Image Gallery section */}
 
       {/* Vehicle Title and Details */}
       <div className="px-6 max-w-7xl mx-auto mt-4">
@@ -235,7 +264,7 @@ export default function VehicleDetails({ vehicle, onBack }: VehicleDetailsProps)
                   <div className="flex space-x-3">
                     <button
                       type="submit"
-                      className="flex-1 bg-[#FF6700] dark:bg-[#FF7D33] text-white font-medium py-3 rounded-xl hover:bg-[#FF6700]/90 dark:hover:bg-[#FF7D33]/90 transition-colors"
+                      className="flex-1 bg-[#FF6700] dark:bg-[#FF7D33] text-white font-medium py-3 rounded-xl hover:bg-[#FF6700]/90 dark:hover:bg-[#2A352A]/90 transition-colors"
                     >
                       Send Message
                     </button>
@@ -269,12 +298,12 @@ export default function VehicleDetails({ vehicle, onBack }: VehicleDetailsProps)
                     </div>
                   </div>
                   <div>
-                    <p className="text-gray-300 text-sm">Address</p>
+                    <p className="text-[#6F7F69] dark:text-gray-400 text-sm">Address</p>
                     <p>{vehicle.sellerAddress}</p>
                   </div>
                   <button
                     onClick={handleContactClick}
-                    className="w-full bg-[#FF6700] dark:bg-[#FF7D33] text-white font-medium py-3 rounded-xl hover:bg-[#FF6700]/90 dark:hover:bg-[#FF7D33]/90 transition-colors mt-4 flex justify-center items-center"
+                    className="w-full bg-[#FF6700] dark:bg-[#FF7D33] text-white font-medium py-3 rounded-xl hover:bg-[#FF6700]/90 dark:hover:bg-[#2A352A]/90 transition-colors mt-4 flex justify-center items-center"
                   >
                     {isMobile ? (
                       <>

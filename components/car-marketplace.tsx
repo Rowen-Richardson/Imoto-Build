@@ -8,8 +8,8 @@ import LocationPage from "./location-page"
 import LoginPage from "./login-page"
 import Dashboard from "./dashboard"
 import { vehicles } from "@/lib/data"
-// Assuming UserProfile is also in lib/data, adjust if it's in lib/types
-import type { Vehicle, UserProfile } from "@/lib/data"
+import type { Vehicle } from "@/lib/data"
+import type { UserProfile } from "./dashboard"; // Import UserProfile from dashboard.tsx
 import { Header } from "./ui/header"
 
 // Define the user state type more explicitly, matching UserProfile
@@ -162,17 +162,11 @@ export default function CarMarketplace() {
       // 7. Fuel Type Filter
       const matchesFuelType = fuelType === "All" || vehicle.fuel === fuelType;
 
-      // 8. Engine Capacity Filter (Requires parsing vehicle engine size or categorization)
-      // This is complex if engine size isn't standardized. Example placeholder:
-      // const matchesEngineCapacity = engineCapacity === "All" // || checkVehicleEngineCapacity(vehicle.engine, engineCapacity);
-      const matchesEngineCapacity = true; // Placeholder - Implement actual logic if needed
+      // 8. Engine Capacity Filter
+      const matchesEngineCapacity = engineCapacity === "All" || vehicle.engineCapacity === engineCapacity;
 
       // 9. Transmission Filter
       const matchesTransmission = transmission === "All" || vehicle.transmission === transmission;
-
-      // 10. Condition Filter (Assuming vehicle has a 'condition' property: 'new' or 'used')
-      // const matchesCondition = condition === "All" || vehicle.condition === condition;
-      const matchesCondition = true; // Placeholder - Add 'condition' to Vehicle type and implement
 
       // Combine all filters
       return matchesSearch
@@ -185,9 +179,8 @@ export default function CarMarketplace() {
           && matchesMinMileage
           && matchesMaxMileage
           && matchesFuelType
-          && matchesEngineCapacity // Add engine capacity check
-          && matchesTransmission
-          && matchesCondition; // Add condition check
+          && matchesEngineCapacity
+          && matchesTransmission;
     })
 
     setFilteredVehicles(filtered)
@@ -253,10 +246,30 @@ export default function CarMarketplace() {
     return (
       <>
         {/* Pass user state to Header */}
-        <Header user={user} onLoginClick={() => setShowLogin(true)} onDashboardClick={() => user ? setShowDashboard(true) : setShowLogin(true)} />
+        <Header
+          user={user}
+          onLoginClick={() => setShowLogin(true)}
+          onDashboardClick={() => user ? setShowDashboard(true) : setShowLogin(true)}
+          onGoHome={() => setIsSearchPage(true)}
+          onShowAllCars={() => { setFilteredVehicles(vehicles); setIsSearchPage(false); }}
+          onGoToSellPage={() => alert("Sell page not implemented")}
+          onSignOut={handleSignOut}
+        />
         <div className="pt-16 md:pt-20">
           {/* Pass province string directly */}
-          <LocationPage province={selectedProvince} vehicles={vehicles} onBack={() => setSelectedProvince(null)} />
+          <LocationPage
+            province={selectedProvince}
+            vehicles={vehicles}
+            onBack={() => setSelectedProvince(null)}
+            user={user}
+            // Pass Header navigation props
+            onLoginClick={() => setShowLogin(true)}
+            onDashboardClick={() => user ? setShowDashboard(true) : setShowLogin(true)}
+            onGoHome={() => setIsSearchPage(true)}
+            onShowAllCars={() => { setFilteredVehicles(vehicles); setIsSearchPage(false); }}
+            onGoToSellPage={() => alert("Sell page not implemented")}
+            onSignOut={handleSignOut}
+          />
         </div>
       </>
     )
@@ -266,17 +279,35 @@ export default function CarMarketplace() {
     return (
       <>
         {/* Pass user state to Header */}
-        <Header user={user} onLoginClick={() => setShowLogin(true)} onDashboardClick={() => user ? setShowDashboard(true) : setShowLogin(true)} />
+        <Header
+          user={user}
+          onLoginClick={() => setShowLogin(true)}
+          onDashboardClick={() => user ? setShowDashboard(true) : setShowLogin(true)}
+          onGoHome={() => setIsSearchPage(true)}
+          onShowAllCars={() => { setFilteredVehicles(vehicles); setIsSearchPage(false); }}
+          onGoToSellPage={() => alert("Sell page not implemented")}
+          onSignOut={handleSignOut}
+        />
         <div className="pt-16 md:pt-20">
-          <VehicleDetails vehicle={selectedVehicle} onBack={() => setSelectedVehicle(null)} />
+          <VehicleDetails vehicle={selectedVehicle} onBack={() => setSelectedVehicle(null)} user={user} /> {/* Pass user prop */}
         </div>
       </>
     )
   }
 
   if (showLogin) {
-    // Pass the updated handleLoginSuccess
-    return <LoginPage onLoginSuccess={handleLoginSuccess} onCancel={() => setShowLogin(false)} />
+    // Pass the updated handleLoginSuccess and Header navigation props
+    return (
+      <LoginPage
+        onLoginSuccess={handleLoginSuccess}
+        onCancel={() => setShowLogin(false)}
+        onDashboardClick={() => user ? setShowDashboard(true) : setShowLogin(true)} // Keep existing logic
+        onGoHome={() => setIsSearchPage(true)} // Go back to main search page
+        onShowAllCars={() => { setFilteredVehicles(vehicles); setIsSearchPage(false); }} // Show all cars
+        onGoToSellPage={() => alert("Sell page not implemented")} // Placeholder
+        onSignOut={handleSignOut} // Pass sign out handler
+      />
+    );
   }
 
   if (showDashboard && user) {
@@ -292,6 +323,11 @@ export default function CarMarketplace() {
             // setFilteredVehicles(vehicles); // Resetting here
         }}
         onUserUpdate={handleUserUpdate} // Pass the update handler
+        // Pass Header navigation props
+        onLoginClick={() => setShowLogin(true)} // Show login page
+        onGoHome={() => setIsSearchPage(true)} // Go back to main search page
+        onShowAllCars={() => { setFilteredVehicles(vehicles); setIsSearchPage(false); }} // Show all cars
+        onGoToSellPage={() => alert("Sell page not implemented")} // Placeholder
       />
     )
   }
@@ -303,6 +339,10 @@ export default function CarMarketplace() {
         user={user}
         onLoginClick={() => setShowLogin(true)}
         onDashboardClick={() => user ? setShowDashboard(true) : setShowLogin(true)} // Show dashboard if logged in, else login
+        onGoHome={() => setIsSearchPage(true)} // Go back to main search page
+        onShowAllCars={() => { setFilteredVehicles(vehicles); setIsSearchPage(false); }} // Show all cars
+        onGoToSellPage={() => alert("Sell page not implemented")} // Placeholder
+        onSignOut={handleSignOut} // Pass sign out handler
         transparent={isSearchPage} // Header is transparent only on the initial search page
       />
 

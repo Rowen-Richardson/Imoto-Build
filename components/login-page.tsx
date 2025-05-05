@@ -4,14 +4,23 @@ import type React from "react"
 
 import { useState } from "react"
 import { Search, Facebook } from "lucide-react"
+import { Header } from "./ui/header" // Import the main Header component
+
+import type { UserProfile } from "./dashboard"; // Import UserProfile type for Header props
 
 interface LoginPageProps {
-  onLoginSuccess: (userData: { email: string; profilePic: string }) => void
+  onLoginSuccess: (userData: UserProfile) => void // Use UserProfile type
   onCancel: () => void
   loginContext?: 'sell' | 'default'
+  // Add Header navigation props
+  onDashboardClick: () => void;
+  onGoHome: () => void;
+  onShowAllCars: () => void;
+  onGoToSellPage: () => void;
+  onSignOut: () => void;
 }
 
-export default function LoginPage({ onLoginSuccess, onCancel, loginContext }: LoginPageProps) {
+export default function LoginPage({ onLoginSuccess, onCancel, loginContext, onDashboardClick, onGoHome, onShowAllCars, onGoToSellPage, onSignOut }: LoginPageProps) {
   const [isLogin, setIsLogin] = useState(true)
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -40,13 +49,14 @@ export default function LoginPage({ onLoginSuccess, onCancel, loginContext }: Lo
       }
 
       const { user, token } = await response.json()
-      
+
       if (rememberMe) {
         localStorage.setItem("authToken", token)
       } else {
         sessionStorage.setItem("authToken", token)
       }
 
+      // Assuming the user object from the API matches the expected structure for onLoginSuccess
       onLoginSuccess(user)
     } catch (err) {
       setError(err instanceof Error ? err.message : "An unexpected error occurred")
@@ -57,54 +67,33 @@ export default function LoginPage({ onLoginSuccess, onCancel, loginContext }: Lo
 
   const handleSocialLogin = (provider: string) => {
     // In a real app, this would authenticate with the provider
+    // Simulate a successful social login
     onLoginSuccess({
       email: `user@${provider.toLowerCase()}.com`,
-      profilePic: "https://via.placeholder.com/40",
+      profilePic: "https://via.placeholder.com/40", // Placeholder image
     })
   }
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* Header - Consistent with home page */}
-      <header className="flex flex-col md:flex-row items-center justify-between bg-white px-6 py-4 shadow-md border-b border-gray-200">
-        <div className="flex items-center space-x-2">
-          <div className="text-red-500 font-bold text-2xl">CarMarketplace</div>
-        </div>
-        <nav className="flex flex-wrap items-center justify-center gap-4 md:gap-6 mt-2 md:mt-0">
-          <a href="#" className="hover:text-red-500 transition-colors">
-            Buy a Car
-          </a>
-          <a href="#" className="hover:text-red-500 transition-colors">
-            Sell a Car
-          </a>
-          <a href="#" className="hover:text-red-500 transition-colors">
-            Partners
-          </a>
-          <a href="#" className="hover:text-red-500 transition-colors">
-            Value My Car
-          </a>
-          <a href="#" className="hover:text-red-500 transition-colors">
-            Tools &amp; Services
-          </a>
-        </nav>
-        <div className="flex items-center space-x-4 mt-2 md:mt-0">
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="Search..."
-              className="px-4 py-2 pr-8 rounded-full border border-gray-300 focus:outline-none focus:border-red-500"
-            />
-            <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen bg-white dark:bg-[var(--dark-bg)]">
+      {/* Use the main Header component */}
+      <Header
+        user={null} // User is not logged in on this page
+        onLoginClick={() => setIsLogin(true)} // Clicking login in header should show login form
+        onDashboardClick={onDashboardClick} // Use prop
+        onGoHome={onGoHome} // Use prop
+        onShowAllCars={onShowAllCars} // Use prop
+        onGoToSellPage={onGoToSellPage} // Use prop
+        onSignOut={onSignOut} // Use prop
+        transparent={false} // Header is not transparent on this page
+      />
 
       {/* Main Content */}
-      <div className="flex flex-col md:flex-row min-h-[calc(100vh-73px)]">
+      <div className="flex flex-col md:flex-row min-h-[calc(100vh-80px)] pt-20">
         {/* Left Column */}
-        <div className="w-full md:w-1/2 bg-white p-8 md:p-16 flex flex-col justify-center">
+        <div className="w-full md:w-1/2 bg-white dark:bg-[#1F2B20] p-8 md:p-16 flex flex-col justify-center text-[#3E5641] dark:text-white">
           <div className="max-w-md mx-auto">
-            <div className="mb-2 text-sm uppercase tracking-wider text-gray-500">LARGEST CAR MARKETPLACE</div>
+            <div className="mb-2 text-sm uppercase tracking-wider text-[#6F7F69] dark:text-gray-400">LARGEST CAR MARKETPLACE</div>
             <h1 className="text-4xl md:text-5xl font-bold mb-6">
               POWERED BY <br />
               CREATORS AROUND <br />
@@ -117,26 +106,26 @@ export default function LoginPage({ onLoginSuccess, onCancel, loginContext }: Lo
               </span>
             </h1>
 
-            <p className="text-gray-600 mb-8">
+            <p className="text-[#6F7F69] dark:text-gray-300 mb-8">
               Over 3 million high-quality vehicles brought to you by the world's premier automotive dealers.
             </p>
 
             {isLogin ? (
               <div>
-                <p className="text-gray-600 mb-4">Don't have an account?</p>
+                <p className="text-[#6F7F69] dark:text-gray-300 mb-4">Don't have an account?</p>
                 <button
                   onClick={() => setIsLogin(false)}
-                  className="inline-flex items-center text-red-500 hover:text-red-700 font-medium"
+                  className="inline-flex items-center text-[#FF6700] dark:text-[#FF7D33] hover:text-[#FF6700]/80 dark:hover:text-[#FF7D33]/80 font-medium transition-colors"
                 >
                   Create account <span className="ml-2">→</span>
                 </button>
               </div>
             ) : (
               <div>
-                <p className="text-gray-600 mb-4">Already have an account?</p>
+                <p className="text-[#6F7F69] dark:text-gray-300 mb-4">Already have an account?</p>
                 <button
                   onClick={() => setIsLogin(true)}
-                  className="inline-flex items-center text-red-500 hover:text-red-700 font-medium"
+                  className="inline-flex items-center text-[#FF6700] dark:text-[#FF7D33] hover:text-[#FF6700]/80 dark:hover:text-[#FF7D33]/80 font-medium transition-colors"
                 >
                   Login here <span className="ml-2">→</span>
                 </button>
@@ -146,7 +135,7 @@ export default function LoginPage({ onLoginSuccess, onCancel, loginContext }: Lo
         </div>
 
         {/* Right Column */}
-        <div className="w-full md:w-1/2 bg-gray-100 p-8 md:p-16 flex items-center justify-center relative">
+        <div className="w-full md:w-1/2 bg-gray-100 dark:bg-[#2A352A] p-8 md:p-16 flex items-center justify-center relative">
           <div
             className="absolute inset-0 bg-cover bg-center opacity-30"
             style={{
@@ -154,11 +143,11 @@ export default function LoginPage({ onLoginSuccess, onCancel, loginContext }: Lo
             }}
           />
 
-          <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-md z-10 relative">
+          <div className="bg-white dark:bg-[#1F2B20] p-8 rounded-lg shadow-lg w-full max-w-md z-10 relative text-[#3E5641] dark:text-white">
             <h2 className="text-2xl font-bold mb-6 text-center">
               {isLogin ? (
                 <>
-                  {this.props.loginContext === 'sell' ?
+                  {loginContext === 'sell' ? // Corrected access
                     "Login to list your car" :
                     "Login to your account"}
                 </>
@@ -166,9 +155,9 @@ export default function LoginPage({ onLoginSuccess, onCancel, loginContext }: Lo
                 "Create your account"
               )}
             </h2>
-            
-            {this.props.loginContext === 'sell' && (
-              <div className="mb-6 p-4 bg-blue-50 rounded-lg text-sm text-blue-800">
+
+            {loginContext === 'sell' && ( // Corrected access
+              <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/30 rounded-lg text-sm text-blue-800 dark:text-blue-300">
                 Unlock our AI-powered selling tools: Get instant price recommendations
                 and reach millions of buyers when you login.
               </div>
@@ -176,7 +165,7 @@ export default function LoginPage({ onLoginSuccess, onCancel, loginContext }: Lo
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   {isLogin ? "Email or Username" : "Email Address"}
                 </label>
                 <input
@@ -184,14 +173,14 @@ export default function LoginPage({ onLoginSuccess, onCancel, loginContext }: Lo
                   id="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-[#4A4D45] rounded-md focus:outline-none focus:ring-2 focus:ring-[#FF6700] dark:focus:ring-[#FF7D33] focus:border-[#FF6700] dark:focus:border-[#FF7D33] bg-white dark:bg-[#2A352A] text-[#3E5641] dark:text-white placeholder-[#6F7F69] dark:placeholder-gray-400"
                   placeholder="you@example.com"
                   required
                 />
               </div>
 
               <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Password
                 </label>
                 <input
@@ -199,7 +188,7 @@ export default function LoginPage({ onLoginSuccess, onCancel, loginContext }: Lo
                   id="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-[#4A4D45] rounded-md focus:outline-none focus:ring-2 focus:ring-[#FF6700] dark:focus:ring-[#FF7D33] focus:border-[#FF6700] dark:focus:border-[#FF7D33] bg-white dark:bg-[#2A352A] text-[#3E5641] dark:text-white placeholder-[#6F7F69] dark:placeholder-gray-400"
                   placeholder="••••••••"
                   required
                 />
@@ -211,13 +200,13 @@ export default function LoginPage({ onLoginSuccess, onCancel, loginContext }: Lo
                     type="checkbox"
                     checked={rememberMe}
                     onChange={() => setRememberMe(!rememberMe)}
-                    className="h-4 w-4 text-red-500 focus:ring-red-500 border-gray-300 rounded"
+                    className="h-4 w-4 text-[#FF6700] dark:text-[#FF7D33] focus:ring-[#FF6700] dark:focus:ring-[#FF7D33] border-gray-300 dark:border-[#4A4D45] rounded"
                   />
-                  <span className="ml-2 text-sm text-gray-600">Remember me</span>
+                  <span className="ml-2 text-sm text-gray-600 dark:text-gray-400">Remember me</span>
                 </label>
 
                 {isLogin && (
-                  <a href="#" className="text-sm text-red-500 hover:text-red-700">
+                  <a href="#" className="text-sm text-[#FF6700] dark:text-[#FF7D33] hover:text-[#FF6700]/80 dark:hover:text-[#FF7D33]/80 transition-colors">
                     Forgot password?
                   </a>
                 )}
@@ -225,7 +214,7 @@ export default function LoginPage({ onLoginSuccess, onCancel, loginContext }: Lo
 
               <button
                 type="submit"
-                className="w-full bg-black text-white py-2 px-4 rounded-md hover:bg-gray-800 transition-colors"
+                className="w-full bg-[#3E5641] text-white dark:bg-[#4A4D45] py-2 px-4 rounded-md hover:bg-[#3E5641]/90 dark:hover:bg-[#4A4D45]/90 transition-colors"
               >
                 {isLogin ? "Login" : "Create Account"}
               </button>
@@ -234,26 +223,26 @@ export default function LoginPage({ onLoginSuccess, onCancel, loginContext }: Lo
             <div className="mt-6">
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-gray-300"></div>
+                  <div className="w-full border-t border-gray-300 dark:border-[#4A4D45]"></div>
                 </div>
                 <div className="relative flex justify-center text-sm">
-                  <span className="px-2 bg-white text-gray-500">Or continue with</span>
+                  <span className="px-2 bg-white dark:bg-[#1F2B20] text-gray-500 dark:text-gray-400">Or continue with</span>
                 </div>
               </div>
 
               <div className="mt-6 grid grid-cols-3 gap-3">
                 <button
                   onClick={() => handleSocialLogin("Facebook")}
-                  className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 dark:border-[#4A4D45] rounded-md shadow-sm bg-white dark:bg-[#2A352A] text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#1F2B20]"
                 >
-                  <Facebook className="h-5 w-5 text-blue-600" />
+                  <Facebook className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                 </button>
                 <button
                   onClick={() => handleSocialLogin("Google")}
-                  className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 dark:border-[#4A4D45] rounded-md shadow-sm bg-white dark:bg-[#2A352A] text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#1F2B20]"
                 >
                   <svg
-                    className="h-5 w-5 text-red-500"
+                    className="h-5 w-5 text-[#FF6700] dark:text-[#FF7D33]" // Updated color
                     xmlns="http://www.w3.org/2000/svg"
                     viewBox="0 0 24 24"
                     fill="currentColor"
@@ -263,10 +252,10 @@ export default function LoginPage({ onLoginSuccess, onCancel, loginContext }: Lo
                 </button>
                 <button
                   onClick={() => handleSocialLogin("Apple")}
-                  className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 dark:border-[#4A4D45] rounded-md shadow-sm bg-white dark:bg-[#2A352A] text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#1F2B20]"
                 >
                   <svg
-                    className="h-5 w-5 text-gray-900"
+                    className="h-5 w-5 text-gray-900 dark:text-gray-100" // Added dark mode text color
                     xmlns="http://www.w3.org/2000/svg"
                     viewBox="0 0 24 24"
                     fill="currentColor"
@@ -278,7 +267,7 @@ export default function LoginPage({ onLoginSuccess, onCancel, loginContext }: Lo
             </div>
 
             <div className="mt-6 text-center">
-              <button onClick={onCancel} className="text-sm text-gray-600 hover:text-gray-900">
+              <button onClick={onCancel} className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100">
                 Back to listings
               </button>
             </div>
