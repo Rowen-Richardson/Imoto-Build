@@ -1,36 +1,49 @@
 "use client"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import type React from "react"
 
-import { Wifi, Car, Thermometer, Clock, ShoppingBag, Shield, Heart, Phone, Mail } from "lucide-react"
+import {
+  Wifi,
+  Car,
+  Thermometer,
+  Clock,
+  ShoppingBag,
+  Shield,
+  Heart,
+  Phone,
+  Mail,
+  X,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react"
 import type { Vehicle } from "@/lib/data"
-import { Header } from "./ui/header" // Import Header
-
-// UserProfile type is not exported from lib/data, defining it here based on usage
-interface UserProfile {
-  email: string
-  profilePic?: string
-  firstName?: string
-  lastName?: string
-  phone?: string
-  suburb?: string
-  city?: string
-  province?: string
-  loginMethod?: 'email' | 'google' | 'facebook' | 'apple'
-}
 
 interface VehicleDetailsProps {
   vehicle: Vehicle
   onBack: () => void
-  // Add user prop if needed for Header, assuming null for now
-  user: UserProfile | null // Corrected type to UserProfile | null
+  user?: any // Add user prop to check if logged in
+  onSaveCar?: (vehicle: Vehicle) => void // Add callback for saving cars
+  savedCars?: Vehicle[] // Add array of saved cars to check if this car is saved
 }
 
-export default function VehicleDetails({ vehicle, onBack, user }: VehicleDetailsProps) { // Add user to destructured props
+export default function VehicleDetails({ vehicle, onBack, user, onSaveCar, savedCars = [] }: VehicleDetailsProps) {
   const [showContactForm, setShowContactForm] = useState(false)
   const [email, setEmail] = useState("")
   const [message, setMessage] = useState("")
   const [isMobile, setIsMobile] = useState(false)
+  const [activeTab, setActiveTab] = useState("details")
+  const [isSaved, setIsSaved] = useState(false)
+  const [currentGallery, setCurrentGallery] = useState(0)
+  const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null)
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false)
+  const galleryRef = useRef<HTMLDivElement>(null)
+
+  // Check if this vehicle is in the saved cars list
+  useEffect(() => {
+    if (savedCars.some((car) => car.id === vehicle.id)) {
+      setIsSaved(true)
+    }
+  }, [savedCars, vehicle.id])
 
   useEffect(() => {
     const checkMobile = () => {
@@ -61,59 +74,281 @@ export default function VehicleDetails({ vehicle, onBack, user }: VehicleDetails
     setMessage("")
   }
 
+  const handleSaveClick = () => {
+    if (!user) {
+      alert("Please log in to save vehicles")
+      return
+    }
+
+    setIsSaved(!isSaved)
+    if (onSaveCar) {
+      onSaveCar(vehicle)
+    }
+  }
+
+  // Generate vehicle images for the gallery
+  const generateVehicleImages = () => {
+    // In a real app, these would be different images from the vehicle
+    // For now, we'll create an array of 21 images using the main image and placeholders
+    const images = [
+      vehicle.image || "/placeholder.svg?height=400&width=600",
+      "/placeholder.svg?height=400&width=600", // Placeholder 1
+      "/placeholder.svg?height=400&width=600", // Placeholder 2
+      "/placeholder.svg?height=400&width=600", // Placeholder 3
+      "/placeholder.svg?height=400&width=600", // Placeholder 4
+      "/placeholder.svg?height=400&width=600", // Placeholder 5
+      "/placeholder.svg?height=400&width=600", // Placeholder 6
+      "/placeholder.svg?height=400&width=600", // Placeholder 7
+      "/placeholder.svg?height=400&width=600", // Placeholder 8
+      "/placeholder.svg?height=400&width=600", // Placeholder 9
+      "/placeholder.svg?height=400&width=600", // Placeholder 10
+      "/placeholder.svg?height=400&width=600", // Placeholder 11
+      "/placeholder.svg?height=400&width=600", // Placeholder 12
+      "/placeholder.svg?height=400&width=600", // Placeholder 13
+      "/placeholder.svg?height=400&width=600", // Placeholder 14
+      "/placeholder.svg?height=400&width=600", // Placeholder 15
+      "/placeholder.svg?height=400&width=600", // Placeholder 16
+      "/placeholder.svg?height=400&width=600", // Placeholder 17
+      "/placeholder.svg?height=400&width=600", // Placeholder 18
+      "/placeholder.svg?height=400&width=600", // Placeholder 19
+      "/placeholder.svg?height=400&width=600", // Placeholder 20
+    ]
+    return images
+  }
+
+  const vehicleImages = generateVehicleImages()
+
+  // Calculate the number of galleries needed (Gallery 1: 5 images, subsequent: 8 images)
+  // Total images: 21
+  // Gallery 1: 5 images (indices 0-4)
+  // Gallery 2: 8 images (indices 5-12)
+  // Gallery 3: 8 images (indices 13-20)
+  const totalGalleries = 3 // Fixed number of galleries as per requirement
+
+  // Get images for Gallery 1 (5 images)
+  const getGalleryOneImages = () => {
+    return vehicleImages.slice(0, 5)
+  }
+
+  // Get images for Gallery 2 (8 images)
+  const getGalleryTwoImages = () => {
+    return vehicleImages.slice(5, 13)
+  }
+
+  // Get images for Gallery 3 (8 images)
+  const getGalleryThreeImages = () => {
+    return vehicleImages.slice(13, 21)
+  }
+
+  const handlePrevGallery = () => {
+    setCurrentGallery((prev) => (prev > 0 ? prev - 1 : totalGalleries - 1))
+    // Scroll to the previous gallery
+    if (galleryRef.current) {
+      const galleryWidth = galleryRef.current.offsetWidth
+      galleryRef.current.scrollBy({ left: -galleryWidth, behavior: "smooth" })
+    }
+  }
+
+  const handleNextGallery = () => {
+    setCurrentGallery((prev) => (prev < totalGalleries - 1 ? prev + 1 : 0))
+    // Scroll to the next gallery
+    if (galleryRef.current) {
+      const galleryWidth = galleryRef.current.offsetWidth
+      galleryRef.current.scrollBy({ left: galleryWidth, behavior: "smooth" })
+    }
+  }
+
+  const openImageModal = (index: number) => {
+    setSelectedImageIndex(index)
+    setIsImageModalOpen(true)
+    // Prevent body scrolling when modal is open
+    document.body.style.overflow = "hidden"
+  }
+
+  const closeImageModal = () => {
+    setIsImageModalOpen(false)
+    setSelectedImageIndex(null)
+    // Restore body scrolling
+    document.body.style.overflow = "auto"
+  }
+
+  const navigateImage = (direction: "prev" | "next") => {
+    if (selectedImageIndex === null) return
+
+    const totalImages = vehicleImages.length
+    if (direction === "prev") {
+      setSelectedImageIndex((prev) => (prev !== null ? (prev > 0 ? prev - 1 : totalImages - 1) : null))
+    } else {
+      setSelectedImageIndex((prev) => (prev !== null ? (prev < totalImages - 1 ? prev + 1 : 0) : null))
+    }
+  }
+
+  // Handle keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!isImageModalOpen) return
+
+      if (e.key === "Escape") {
+        closeImageModal()
+      } else if (e.key === "ArrowLeft") {
+        navigateImage("prev")
+      } else if (e.key === "ArrowRight") {
+        navigateImage("next")
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown)
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown)
+    }
+  }, [isImageModalOpen, selectedImageIndex])
+
   return (
-    <div className="min-h-screen bg-[var(--light-bg)] dark:bg-[var(--dark-bg)] flex flex-col">
-      {/* Add Header component */}
-      <Header
-        user={user} // Pass the user prop
-        onLoginClick={() => alert("Login from Vehicle Details not implemented")} // Placeholder
-        onDashboardClick={() => alert("Dashboard from Vehicle Details not implemented")} // Placeholder
-        onGoHome={onBack} // Go back to the main CarMarketplace view
-        onShowAllCars={onBack} // Go back to the main CarMarketplace view
-        onGoToSellPage={() => alert("Sell Page from Vehicle Details not implemented")} // Placeholder
-        onSignOut={() => alert("Sign Out from Vehicle Details not implemented")} // Placeholder
-        transparent={false}
-      />
+    <div className="min-h-screen">
+      {/* Header Section with Back Button and Price */}
+      <section className="px-6 pt-6 md:pt-10">
+        <div className="max-w-7xl mx-auto flex justify-between items-center">
+          <button
+            onClick={onBack}
+            className="inline-flex items-center text-[#FF6700] dark:text-[#FF7D33] hover:underline"
+          >
+            &larr; Back to Listings
+          </button>
+          <p className="text-[#FF6700] dark:text-[#FF7D33] text-2xl md:text-3xl font-bold">{vehicle.price}</p>
+        </div>
+      </section>
 
-      {/* Main Content Area */}
-      <div className="flex-1 px-6 pb-6 overflow-auto pt-20">
-        {/* Header Section with Back Button and Price */}
-        <section className="max-w-7xl mx-auto flex justify-between items-center mb-4">
-            <button
-              onClick={onBack}
-              className="inline-flex items-center text-[#FF6700] dark:text-[#FF7D33] hover:underline"
-            >
-              &larr; Back to Listings
-            </button>
-            <p className="text-[#FF6700] dark:text-[#FF7D33] text-2xl md:text-3xl font-bold">
-              {vehicle.price}
-            </p>
-        </section>
+      {/* Image Gallery */}
+      <div className="px-6 max-w-7xl mx-auto mt-4 relative">
+        <div className="gallery-container relative flex items-center">
+          {/* Removed Chevron Left and Right buttons */}
 
-        {/* Image Gallery */}
-        <div className="max-w-7xl mx-auto mt-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="md:col-span-2 h-[400px] overflow-hidden rounded-lg">
-              <img
-                src={vehicle.image || "https://via.placeholder.com/600/111/fff?text=Luxury+Vehicle"}
-                alt={`${vehicle.make} ${vehicle.model}`}
-                className="w-full h-full object-cover"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4 h-[400px]">
-              {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="overflow-hidden rounded-lg">
+          {/* Gallery Scroll Container */}
+          <div
+            ref={galleryRef}
+            className="gallery-scroll flex overflow-x-auto snap-x snap-mandatory w-full"
+          >
+            {/* Gallery 1 */}
+            <section className="gallery-section flex-shrink-0 w-full snap-center grid grid-cols-1 md:grid-cols-3 gap-4 h-[400px]"> {/* Set fixed height to match other galleries */}
+              <div className="md:col-span-2 h-full overflow-hidden rounded-lg group relative">
+                <img
+                  src={getGalleryOneImages()[0] || "/placeholder.svg?height=400&width=600"}
+                  alt={`${vehicle.make} ${vehicle.model} main view`}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 cursor-pointer"
+                  onClick={() => openImageModal(0)}
+                />
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                  <div className="bg-white/80 rounded-full p-2">
+                    <Search className="w-6 h-6 text-[#3E5641]" />
+                  </div>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4 h-full">
+                {getGalleryOneImages()
+                  .slice(1)
+                  .map((img, i) => (
+                    <div key={i} className="aspect-square overflow-hidden rounded-lg group relative h-full">
+                      <img
+                        src={img || "/placeholder.svg"}
+                        alt={`${vehicle.make} ${vehicle.model} view ${i + 1}`}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 cursor-pointer"
+                        onClick={() => openImageModal(i + 1)}
+                      />
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                        <div className="bg-white/80 rounded-full p-2">
+                          <Search className="w-4 h-4 text-[#3E5641]" />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </section>
+
+            {/* Gallery 2 */}
+            <section className="gallery-section flex-shrink-0 w-full snap-center grid grid-cols-4 gap-4 h-[400px]">
+              {getGalleryTwoImages().map((img, i) => (
+                <div
+                  key={i}
+                  className="w-full h-full overflow-hidden rounded-lg group relative flex"
+                  style={{ aspectRatio: "1 / 1" }}
+                >
                   <img
-                    src="https://via.placeholder.com/600/111/fff?text=Luxury+Vehicle"
-                    alt="Vehicle detail"
-                    className="w-full h-full object-cover"
+                    src={img || "/placeholder.svg"}
+                    alt={`${vehicle.make} ${vehicle.model} additional view ${i + 1}`}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 cursor-pointer"
+                    onClick={() => openImageModal(5 + i)}
                   />
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                    <div className="bg-white/80 rounded-full p-2">
+                      <Search className="w-4 h-4 text-[#3E5641]" />
+                    </div>
+                  </div>
                 </div>
               ))}
-            </div>
+            </section>
+
+            {/* Gallery 3 */}
+            <section className="gallery-section flex-shrink-0 w-full snap-center grid grid-cols-4 gap-4 h-[400px]">
+              {getGalleryThreeImages().map((img, i) => (
+                <div
+                  key={i}
+                  className="w-full h-full overflow-hidden rounded-lg group relative flex"
+                  style={{ aspectRatio: "1 / 1" }}
+                >
+                  <img
+                    src={img || "/placeholder.svg"}
+                    alt={`${vehicle.make} ${vehicle.model} additional view ${i + 1}`}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 cursor-pointer"
+                    onClick={() => openImageModal(13 + i)}
+                  />
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                    <div className="bg-white/80 rounded-full p-2">
+                      <Search className="w-4 h-4 text-[#3E5641]" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </section>
           </div>
         </div>
-      </div> {/* Added missing closing div for Image Gallery section */}
+      </div>
+
+      {/* Image Modal */}
+      {isImageModalOpen && selectedImageIndex !== null && (
+        <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center">
+          <button
+            onClick={closeImageModal}
+            className="absolute top-4 right-4 text-white bg-black/50 hover:bg-black/70 p-2 rounded-full transition-colors"
+            aria-label="Close image"
+          >
+            <X className="w-6 h-6" />
+          </button>
+
+          <button
+            onClick={() => navigateImage("prev")}
+            className="absolute left-4 text-white bg-black/50 hover:bg-black/70 p-2 rounded-full transition-colors"
+            aria-label="Previous image"
+          >
+            <ChevronLeft className="w-6 h-6" />
+          </button>
+
+          <img
+            src={vehicleImages[selectedImageIndex] || "/placeholder.svg"}
+            alt={`${vehicle.make} ${vehicle.model} enlarged view`}
+            className="max-h-[90vh] max-w-[90vw] object-contain"
+          />
+
+          <button
+            onClick={() => navigateImage("next")}
+            className="absolute right-4 text-white bg-black/50 hover:bg-[#3E5641]/70 transition-colors"
+            aria-label="Next image"
+          >
+            <ChevronRight className="w-6 h-6" />
+          </button>
+
+          {/* Removed image index text */}
+        </div>
+      )}
 
       {/* Vehicle Title and Details */}
       <div className="px-6 max-w-7xl mx-auto mt-4">
@@ -125,32 +360,50 @@ export default function VehicleDetails({ vehicle, onBack, user }: VehicleDetails
             <div className="bg-[#9FA791]/20 dark:bg-[#4A4D45]/40 px-3 py-1.5 rounded-full text-sm text-[#3E5641] dark:text-white">
               Sponsored
             </div>
-            <div className="text-[#3E5641] dark:text-white px-3 py-1.5 rounded-full text-sm flex items-center space-x-1 hover:bg-[#FFF8E0] dark:hover:bg-[#2A352A] cursor-pointer">
-              <Heart className="w-4 h-4 text-[#FF6700] dark:text-[#FF7D33]" />
-              <span>Save</span>
-            </div>
+            <button
+              onClick={handleSaveClick}
+              className="text-[#3E5641] dark:text-white px-3 py-1.5 rounded-full text-sm flex items-center space-x-1 hover:bg-[#FFF8E0] dark:hover:bg-[#2A352A] cursor-pointer"
+            >
+              <Heart
+                className={`w-4 h-4 ${isSaved ? "text-purple-600 fill-purple-600" : "text-[#FF6700] dark:text-[#FF7D33]"}`}
+              />
+              <span>{isSaved ? "Saved" : "Save"}</span>
+            </button>
           </div>
         </div>
 
         <p className="text-[#6F7F69] dark:text-gray-300 mb-2">
-          Mileage: {vehicle.mileage} km | Transmission: {vehicle.transmission} | Fuel: {vehicle.fuel}
+          Mileage: {vehicle.mileage} km | Transmission: {vehicle.transmission} | Fuel: {vehicle.fuel} | Engine:{" "}
+          {vehicle.engineCapacity}
         </p>
       </div>
 
       {/* Tabs Section */}
       <div className="border-b border-[#9FA791]/20 dark:border-[#4A4D45]/20 mt-4">
         <div className="px-6 max-w-7xl mx-auto flex space-x-8">
-          <button className="py-3 border-b-2 border-[#FF6700] dark:border-[#FF7D33] font-medium text-[#3E5641] dark:text-white">
+          <button
+            className={`py-3 font-medium ${activeTab === "details" ? "border-b-2 border-[#FF6700] dark:border-[#FF7D33] text-[#3E5641] dark:text-white" : "text-[#6F7F69] dark:text-gray-400 hover:text-[#3E5641] dark:hover:text-white"}`}
+            onClick={() => setActiveTab("details")}
+          >
             Details
           </button>
-          <button className="py-3 text-[#6F7F69] dark:text-gray-400 hover:text-[#3E5641] dark:hover:text-white">
-            Models
+          <button
+            className={`py-3 font-medium ${activeTab === "report" ? "border-b-2 border-[#FF6700] dark:border-[#FF7D33] text-[#3E5641] dark:text-white" : "text-[#6F7F69] dark:text-gray-400 hover:text-[#3E5641] dark:hover:text-white"}`}
+            onClick={() => setActiveTab("report")}
+          >
+            Vehicle Report
           </button>
-          <button className="py-3 text-[#6F7F69] dark:text-gray-400 hover:text-[#3E5641] dark:hover:text-white">
-            Features
+          <button
+            className={`py-3 font-medium ${activeTab === "insurance" ? "border-b-2 border-[#FF6700] dark:border-[#FF7D33] text-[#3E5641] dark:text-white" : "text-[#6F7F69] dark:text-gray-400 hover:text-[#3E5641] dark:hover:text-white"}`}
+            onClick={() => setActiveTab("insurance")}
+          >
+            Insurance Quote
           </button>
-          <button className="py-3 text-[#6F7F69] dark:text-gray-400 hover:text-[#3E5641] dark:hover:text-white">
-            Terms
+          <button
+            className={`py-3 font-medium ${activeTab === "review" ? "border-b-2 border-[#FF6700] dark:border-[#FF7D33] text-[#3E5641] dark:text-white" : "text-[#6F7F69] dark:text-gray-400 hover:text-[#3E5641] dark:hover:text-white"}`}
+            onClick={() => setActiveTab("review")}
+          >
+            Vehicle Review
           </button>
         </div>
       </div>
@@ -159,72 +412,114 @@ export default function VehicleDetails({ vehicle, onBack, user }: VehicleDetails
       <div className="px-6 py-6 max-w-7xl mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2">
-            <h2 className="text-2xl font-bold mb-4 text-[#3E5641] dark:text-white">Vehicle Overview</h2>
+            {activeTab === "details" && (
+              <>
+                <h2 className="text-2xl font-bold mb-4 text-[#3E5641] dark:text-white">Description</h2>
+                <p className="text-[#6F7F69] dark:text-gray-300 mb-6">
+                  This {vehicle.year} {vehicle.make} {vehicle.model} {vehicle.variant} is in excellent condition with
+                  only {vehicle.mileage} km on the odometer. It features a powerful {vehicle.engineCapacity}{" "}
+                  {vehicle.fuel} engine with {vehicle.transmission} transmission. The car has been well maintained and
+                  serviced regularly. It comes with a full service history and is ready for its new owner. Located in{" "}
+                  {vehicle.city}, {vehicle.province}, this vehicle is perfect for anyone looking for reliability and
+                  style.
+                </p>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6">
-              <div className="flex items-center">
-                <Wifi className="w-6 h-6 mr-4 text-[#FF6700] dark:text-[#FF7D33]" />
-                <span className="text-[#3E5641] dark:text-white">Connectivity options</span>
-              </div>
-              <div className="flex items-center">
-                <Car className="w-6 h-6 mr-4 text-[#FF6700] dark:text-[#FF7D33]" />
-                <span className="text-[#3E5641] dark:text-white">Valet parking service</span>
-              </div>
-              <div className="flex items-center">
-                <Thermometer className="w-6 h-6 mr-4 text-[#FF6700] dark:text-[#FF7D33]" />
-                <span className="text-[#3E5641] dark:text-white">Climate control system</span>
-              </div>
-              <div className="flex items-center">
-                <Clock className="w-6 h-6 mr-4 text-[#FF6700] dark:text-[#FF7D33]" />
-                <span className="text-[#3E5641] dark:text-white">24/7 customer support</span>
-              </div>
-              <div className="flex items-center">
-                <ShoppingBag className="w-6 h-6 mr-4 text-[#FF6700] dark:text-[#FF7D33]" />
-                <span className="text-[#3E5641] dark:text-white">Luxury interiors</span>
-              </div>
-              <div className="flex items-center">
-                <Shield className="w-6 h-6 mr-4 text-[#FF6700] dark:text-[#FF7D33]" />
-                <span className="text-[#3E5641] dark:text-white">Advanced security features</span>
-              </div>
-            </div>
+                {/* Removed Vehicle Overview section with Coming Soon */}
 
-            <div className="mt-6">
-              <h3 className="text-xl font-bold mb-4 text-[#3E5641] dark:text-white">Technical Details</h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div>
-                  <p className="text-[#6F7F69] dark:text-gray-400 text-sm">Make</p>
-                  <p className="text-[#3E5641] dark:text-white">{vehicle.make}</p>
+                <div className="mt-6">
+                  <h3 className="text-xl font-bold mb-4 text-[#3E5641] dark:text-white">Technical Details</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div>
+                      <p className="text-[#6F7F69] dark:text-gray-400 text-sm">Make</p>
+                      <p className="text-[#3E5641] dark:text-white">{vehicle.make}</p>
+                    </div>
+                    <div>
+                      <p className="text-[#6F7F69] dark:text-gray-400 text-sm">Model</p>
+                      <p className="text-[#3E5641] dark:text-white">
+                        {vehicle.model} {vehicle.variant}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[#6F7F69] dark:text-gray-400 text-sm">Year</p>
+                      <p className="text-[#3E5641] dark:text-white">{vehicle.year}</p>
+                    </div>
+                    <div>
+                      <p className="text-[#6F7F69] dark:text-gray-400 text-sm">Mileage</p>
+                      <p className="text-[#3E5641] dark:text-white">{vehicle.mileage} km</p>
+                    </div>
+                    <div>
+                      <p className="text-[#6F7F69] dark:text-gray-400 text-sm">Transmission</p>
+                      <p className="text-[#3E5641] dark:text-white">{vehicle.transmission}</p>
+                    </div>
+                    <div>
+                      <p className="text-[#6F7F69] dark:text-gray-400 text-sm">Fuel</p>
+                      <p className="text-[#3E5641] dark:text-white">{vehicle.fuel}</p>
+                    </div>
+                    <div>
+                      <p className="text-[#6F7F69] dark:text-gray-400 text-sm">Engine</p>
+                      <p className="text-[#3E5641] dark:text-white">{vehicle.engineCapacity}</p>
+                    </div>
+                    <div>
+                      <p className="text-[#6F7F69] dark:text-gray-400 text-sm">Body Type</p>
+                      <p className="text-[#3E5641] dark:text-white">{vehicle.bodyType}</p>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-[#6F7F69] dark:text-gray-400 text-sm">Model</p>
-                  <p className="text-[#3E5641] dark:text-white">
-                    {vehicle.model} {vehicle.variant}
-                  </p>
+              </>
+            )}
+
+            {activeTab === "report" && (
+              <div className="relative">
+                <h2 className="text-2xl font-bold mb-4 text-[#3E5641] dark:text-white">Vehicle Report</h2>
+                {/* Removed blur and Coming Soon overlay */}
+                <div className="h-[400px] w-full bg-[#f5f5f5] dark:bg-[#2A352A] rounded-lg flex items-center justify-center"> {/* Removed blur-[2px] */}
+                  <div className="text-center">
+                    <Car className="w-16 h-16 mx-auto mb-4 text-[#9FA791] dark:text-[#4A4D45]" />
+                    <p className="text-lg font-medium text-[#6F7F69] dark:text-gray-400">
+                      Comprehensive vehicle history report
+                    </p>
+                    <p className="text-sm text-[#9FA791] dark:text-[#4A4D45] mt-2">
+                      Including accident history, service records, and ownership details
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-[#6F7F69] dark:text-gray-400 text-sm">Year</p>
-                  <p className="text-[#3E5641] dark:text-white">{vehicle.year}</p>
-                </div>
-                <div>
-                  <p className="text-[#6F7F69] dark:text-gray-400 text-sm">Mileage</p>
-                  <p className="text-[#3E5641] dark:text-white">{vehicle.mileage} km</p>
-                </div>
-                <div>
-                  <p className="text-[#6F7F69] dark:text-gray-400 text-sm">Transmission</p>
-                  <p className="text-[#3E5641] dark:text-white">{vehicle.transmission}</p>
-                </div>
-                <div>
-                  <p className="text-[#6F7F69] dark:text-gray-400 text-sm">Fuel</p>
-                  <p className="text-[#3E5641] dark:text-white">{vehicle.fuel}</p>
-                </div>
-                <div>
-                  <p className="text-[#6F7F69] dark:text-gray-400 text-sm">Location</p>
-                  <p className="text-[#3E5641] dark:text-white">
-                    {vehicle.city}, {vehicle.province}
-                  </p>
-                </div>
+                {/* Removed Coming Soon overlay div */}
               </div>
-            </div>
+            )}
+
+            {activeTab === "insurance" && (
+              <div className="relative">
+                <h2 className="text-2xl font-bold mb-4 text-[#3E5641] dark:text-white">Insurance Quote</h2>
+                {/* Removed blur and Coming Soon overlay */}
+                <div className="h-[400px] w-full bg-[#f5f5f5] dark:bg-[#2A352A] rounded-lg flex items-center justify-center"> {/* Removed blur-[2px] */}
+                  <div className="text-center">
+                    <Shield className="w-16 h-16 mx-auto mb-4 text-[#9FA791] dark:text-[#4A4D45]" />
+                    <p className="text-lg font-medium text-[#6F7F69] dark:text-gray-400">
+                      Get instant insurance quotes
+                    </p>
+                    <p className="text-sm text-[#9FA791] dark:text-[#4A4D45] mt-2">
+                      Compare rates from multiple providers
+                    </p>
+                  </div>
+                </div>
+                {/* Removed Coming Soon overlay div */}
+              </div>
+            )}
+
+            {activeTab === "review" && (
+              <div className="relative">
+                <h2 className="text-2xl font-bold mb-4 text-[#3E5641] dark:text-white">Vehicle Review</h2>
+                {/* Removed blur and Coming Soon overlay */}
+                <div className="h-[400px] w-full bg-[#f5f5f5] dark:bg-[#2A352A] rounded-lg flex items-center justify-center"> {/* Removed blur-[2px] */}
+                  <div className="text-center">
+                    <Star className="w-16 h-16 mx-auto mb-4 text-[#9FA791] dark:text-[#4A4D45]" />
+                    <p className="text-lg font-medium text-[#6F7F69] dark:text-gray-400">Expert vehicle reviews</p>
+                    <p className="text-sm text-[#9FA791] dark:text-[#4A4D45] mt-2">Detailed analysis and ratings</p>
+                  </div>
+                </div>
+                {/* Removed Coming Soon overlay div */}
+              </div>
+            )}
           </div>
 
           {/* Contact Seller Section */}
@@ -264,7 +559,7 @@ export default function VehicleDetails({ vehicle, onBack, user }: VehicleDetails
                   <div className="flex space-x-3">
                     <button
                       type="submit"
-                      className="flex-1 bg-[#FF6700] dark:bg-[#FF7D33] text-white font-medium py-3 rounded-xl hover:bg-[#FF6700]/90 dark:hover:bg-[#2A352A]/90 transition-colors"
+                      className="flex-1 bg-[#FF6700] dark:bg-[#FF7D33] text-white font-medium py-3 rounded-xl hover:bg-[#FF6700]/90 dark:hover:bg-[#FF7D33]/90 transition-colors"
                     >
                       Send Message
                     </button>
@@ -298,12 +593,12 @@ export default function VehicleDetails({ vehicle, onBack, user }: VehicleDetails
                     </div>
                   </div>
                   <div>
-                    <p className="text-[#6F7F69] dark:text-gray-400 text-sm">Address</p>
+                    <p className="text-gray-300 text-sm">Address</p>
                     <p>{vehicle.sellerAddress}</p>
                   </div>
                   <button
                     onClick={handleContactClick}
-                    className="w-full bg-[#FF6700] dark:bg-[#FF7D33] text-white font-medium py-3 rounded-xl hover:bg-[#FF6700]/90 dark:hover:bg-[#2A352A]/90 transition-colors mt-4 flex justify-center items-center"
+                    className="w-full bg-[#FF6700] dark:bg-[#FF7D33] text-white font-medium py-3 rounded-xl hover:bg-[#FF6700]/90 dark:hover:bg-[#FF7D33]/90 transition-colors mt-4 flex justify-center items-center"
                   >
                     {isMobile ? (
                       <>
@@ -340,3 +635,6 @@ export default function VehicleDetails({ vehicle, onBack, user }: VehicleDetails
     </div>
   )
 }
+
+// Import Star icon for reviews
+import { Star, Search } from "lucide-react"

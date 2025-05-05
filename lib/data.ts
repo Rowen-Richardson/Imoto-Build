@@ -17,6 +17,7 @@ export interface Vehicle {
   sellerAddress: string
   bodyType: string
   engineCapacity: string
+  description?: string // Added description
 }
 
 export const vehicles: Vehicle[] = [
