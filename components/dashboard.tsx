@@ -1,5 +1,6 @@
 "use client"
 import { useState, useEffect } from "react"
+import Image from "next/image" // Added for user profile picture
 import Link from "next/link"
 import { Plus, Edit, Eye, Heart, MessageSquare, Car, Package } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -9,19 +10,25 @@ import LikedCarsPage from "./liked-cars-page"
 import VehicleDetails from "./vehicle-details"
 import { vehicles } from "@/lib/data"
 import type { Vehicle } from "@/lib/data"
+import type { UserProfile } from "@/types/user"; // Import UserProfile from shared types
 
 interface DashboardProps {
-  user: {
-    email: string
-    profilePic?: string
-  }
+  user: UserProfile; // Use the imported UserProfile type
   onSignOut: () => void
   onBack: () => void
   savedCars?: Vehicle[] // Add saved cars prop
   onViewDetails?: (vehicle: Vehicle) => void // Add callback for viewing details
+  onViewProfileSettings: () => void // Add callback for viewing profile settings
+  onViewUploadVehicle: () => void; // Add callback for viewing vehicle upload page
+  onUserUpdate: (updatedData: Partial<UserProfile>) => void; // Add onUserUpdate prop
+  // Add Header navigation props (onSignOut was already present)
+  onLoginClick: () => void;
+  onGoHome: () => void;
+  onShowAllCars: () => void;
+  onGoToSellPage: () => void; // This prop seems to be intended for a sell page, will repurpose for upload for now
 }
 
-export default function Dashboard({ user, onSignOut, onBack, savedCars = [], onViewDetails }: DashboardProps) {
+export default function Dashboard({ user, onSignOut, onBack, savedCars = [], onViewDetails, onViewProfileSettings, onViewUploadVehicle }: DashboardProps) {
   const [showLikedCarsPage, setShowLikedCarsPage] = useState(false)
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null)
   const [currentCarIndex, setCurrentCarIndex] = useState(0)
@@ -55,6 +62,16 @@ export default function Dashboard({ user, onSignOut, onBack, savedCars = [], onV
     }
   }
 
+  // Prepare dynamic user display info
+  const userDisplayName = (user.firstName && user.lastName)
+    ? `${user.firstName} ${user.lastName}`
+    : user.email.split("@")[0];
+
+  const userInitials = (
+    (user.firstName?.[0] || "") + (user.lastName?.[0] || "") ||
+    user.email?.[0] || "U" // Fallback to 'U' if email is somehow empty
+  ).toUpperCase();
+
   if (selectedVehicle) {
     return <VehicleDetails vehicle={selectedVehicle} onBack={() => setSelectedVehicle(null)} user={user} />
   }
@@ -73,11 +90,13 @@ export default function Dashboard({ user, onSignOut, onBack, savedCars = [], onV
   return (
     <div className="h-screen bg-white flex flex-col">
       {/* Top Header Section */}
-      <Header user={user} onDashboardClick={onBack} transparent={false} />
+      <Header user={user} onDashboardClick={onBack} />
 
       {/* Main Content Area: Fills remaining space */}
       <main className="flex-1 px-6 pb-6 overflow-auto pt-20">
-        <h1 className="text-4xl font-bold mb-6">Welcome, {user.email.split("@")[0]}</h1>
+        <h1 className="text-4xl font-bold mb-6">
+          Welcome, {user.firstName || user.email.split("@")[0]}
+        </h1>
 
         {/* Center container for the entire grid */}
         <div className="w-full mx-auto h-full">
@@ -88,18 +107,29 @@ export default function Dashboard({ user, onSignOut, onBack, savedCars = [], onV
               {/* ROW 1: Profile, Progress, Vehicle Uploads */}
               <div className="grid grid-cols-3 gap-4">
                 {/* Profile Card */}
-                <Link href="/profile-settings" className="block min-w-0">
+                {/* Changed from Link to div with onClick to handle view state in parent */}
+                <div className="col-span-1 block min-w-0" onClick={onViewProfileSettings}>
                   <Card className="rounded-3xl overflow-hidden w-full h-full transition-transform hover:scale-105 cursor-pointer">
                     <div className="relative w-full h-full">
-                      {/* Using a div with initials instead of an image */}
-                      <div className="w-full h-full bg-[#2E933C] flex items-center justify-center text-white">
-                        <div className="text-center">
-                          <div className="text-5xl font-bold mb-2">LP</div>
-                          <div className="text-sm">Lora Piterson</div>
+                      {user.profilePic ? (
+                        <Image
+                          src={user.profilePic}
+                          alt={`${userDisplayName}'s profile`}
+                          layout="fill"
+                          objectFit="cover"
+                          className="object-cover"
+                          // onError could be used to fallback to initials if image fails
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-[#2E933C] flex items-center justify-center text-white">
+                          <div className="text-center">
+                            <div className="text-5xl font-bold mb-2">{userInitials}</div>
+                            <div className="text-sm">{userDisplayName}</div>
+                          </div>
                         </div>
-                      </div>
+                      )}
                       <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/70 to-transparent text-white">
-                        <h3 className="text-2xl font-bold">Lora Piterson</h3>
+                        <h3 className="text-2xl font-bold">{userDisplayName}</h3>
                         <div className="mt-2">
                           <span className="inline-block border border-white/50 rounded-full px-4 py-1 text-sm">
                             UPDATE PROFILE
@@ -108,7 +138,7 @@ export default function Dashboard({ user, onSignOut, onBack, savedCars = [], onV
                       </div>
                     </div>
                   </Card>
-                </Link>
+                </div>
 
                 {/* Progress Card - Enhanced metrics display */}
                 <Card className="rounded-3xl p-5 w-full h-full flex flex-col justify-between bg-gradient-to-br from-white to-gray-50">
@@ -166,7 +196,8 @@ export default function Dashboard({ user, onSignOut, onBack, savedCars = [], onV
                 </Card>
 
                 {/* Vehicle Uploads Card - Transformed from Time Tracker */}
-                <Card className="rounded-3xl p-5 w-full h-full flex flex-col justify-between bg-gradient-to-br from-[#FF6700] to-[#FF9248] text-white cursor-pointer hover:shadow-lg transition-all">
+                {/* Added onClick handler to navigate to the upload page */}
+                <Card className="rounded-3xl p-5 w-full h-full flex flex-col justify-between bg-gradient-to-br from-[#FF6700] to-[#FF9248] text-white cursor-pointer hover:shadow-lg transition-all" onClick={onViewUploadVehicle}>
                   <div className="flex justify-between items-center">
                     <h3 className="text-xl font-semibold">Vehicle Uploads</h3>
                     <Car className="w-6 h-6" />

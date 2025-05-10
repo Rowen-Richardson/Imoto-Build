@@ -1,5 +1,5 @@
 "use client"
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useMemo, useRef } from "react"
 import type React from "react"
 
 import {
@@ -15,11 +15,13 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
+  Star, // Keep for review tab
+  Search, // For image zoom overlay
 } from "lucide-react"
 import type { Vehicle } from "@/lib/data"
 
 interface VehicleDetailsProps {
-  vehicle: Vehicle
+  vehicle: Vehicle // Assumes Vehicle type now has vehicle.images?: string[]
   onBack: () => void
   user?: any // Add user prop to check if logged in
   onSaveCar?: (vehicle: Vehicle) => void // Add callback for saving cars
@@ -33,10 +35,8 @@ export default function VehicleDetails({ vehicle, onBack, user, onSaveCar, saved
   const [isMobile, setIsMobile] = useState(false)
   const [activeTab, setActiveTab] = useState("details")
   const [isSaved, setIsSaved] = useState(false)
-  const [currentGallery, setCurrentGallery] = useState(0)
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null)
   const [isImageModalOpen, setIsImageModalOpen] = useState(false)
-  const galleryRef = useRef<HTMLDivElement>(null)
 
   // Check if this vehicle is in the saved cars list
   useEffect(() => {
@@ -86,76 +86,29 @@ export default function VehicleDetails({ vehicle, onBack, user, onSaveCar, saved
     }
   }
 
-  // Generate vehicle images for the gallery
-  const generateVehicleImages = () => {
-    // In a real app, these would be different images from the vehicle
-    // For now, we'll create an array of 21 images using the main image and placeholders
-    const images = [
-      vehicle.image || "/placeholder.svg?height=400&width=600",
-      "/placeholder.svg?height=400&width=600", // Placeholder 1
-      "/placeholder.svg?height=400&width=600", // Placeholder 2
-      "/placeholder.svg?height=400&width=600", // Placeholder 3
-      "/placeholder.svg?height=400&width=600", // Placeholder 4
-      "/placeholder.svg?height=400&width=600", // Placeholder 5
-      "/placeholder.svg?height=400&width=600", // Placeholder 6
-      "/placeholder.svg?height=400&width=600", // Placeholder 7
-      "/placeholder.svg?height=400&width=600", // Placeholder 8
-      "/placeholder.svg?height=400&width=600", // Placeholder 9
-      "/placeholder.svg?height=400&width=600", // Placeholder 10
-      "/placeholder.svg?height=400&width=600", // Placeholder 11
-      "/placeholder.svg?height=400&width=600", // Placeholder 12
-      "/placeholder.svg?height=400&width=600", // Placeholder 13
-      "/placeholder.svg?height=400&width=600", // Placeholder 14
-      "/placeholder.svg?height=400&width=600", // Placeholder 15
-      "/placeholder.svg?height=400&width=600", // Placeholder 16
-      "/placeholder.svg?height=400&width=600", // Placeholder 17
-      "/placeholder.svg?height=400&width=600", // Placeholder 18
-      "/placeholder.svg?height=400&width=600", // Placeholder 19
-      "/placeholder.svg?height=400&width=600", // Placeholder 20
-    ]
-    return images
-  }
-
-  const vehicleImages = generateVehicleImages()
-
-  // Calculate the number of galleries needed (Gallery 1: 5 images, subsequent: 8 images)
-  // Total images: 21
-  // Gallery 1: 5 images (indices 0-4)
-  // Gallery 2: 8 images (indices 5-12)
-  // Gallery 3: 8 images (indices 13-20)
-  const totalGalleries = 3 // Fixed number of galleries as per requirement
+  const allDisplayableImages = useMemo(() => {
+    if (vehicle.images && vehicle.images.length > 0) {
+      return vehicle.images
+    }
+    if (vehicle.image) {
+      return [vehicle.image]
+    }
+    return []
+  }, [vehicle.images, vehicle.image])
 
   // Get images for Gallery 1 (5 images)
   const getGalleryOneImages = () => {
-    return vehicleImages.slice(0, 5)
+    return allDisplayableImages.slice(0, 5)
   }
 
   // Get images for Gallery 2 (8 images)
   const getGalleryTwoImages = () => {
-    return vehicleImages.slice(5, 13)
+    return allDisplayableImages.slice(5, 13)
   }
 
   // Get images for Gallery 3 (8 images)
   const getGalleryThreeImages = () => {
-    return vehicleImages.slice(13, 21)
-  }
-
-  const handlePrevGallery = () => {
-    setCurrentGallery((prev) => (prev > 0 ? prev - 1 : totalGalleries - 1))
-    // Scroll to the previous gallery
-    if (galleryRef.current) {
-      const galleryWidth = galleryRef.current.offsetWidth
-      galleryRef.current.scrollBy({ left: -galleryWidth, behavior: "smooth" })
-    }
-  }
-
-  const handleNextGallery = () => {
-    setCurrentGallery((prev) => (prev < totalGalleries - 1 ? prev + 1 : 0))
-    // Scroll to the next gallery
-    if (galleryRef.current) {
-      const galleryWidth = galleryRef.current.offsetWidth
-      galleryRef.current.scrollBy({ left: galleryWidth, behavior: "smooth" })
-    }
+    return allDisplayableImages.slice(13, 21)
   }
 
   const openImageModal = (index: number) => {
@@ -175,7 +128,7 @@ export default function VehicleDetails({ vehicle, onBack, user, onSaveCar, saved
   const navigateImage = (direction: "prev" | "next") => {
     if (selectedImageIndex === null) return
 
-    const totalImages = vehicleImages.length
+    const totalImages = allDisplayableImages.length
     if (direction === "prev") {
       setSelectedImageIndex((prev) => (prev !== null ? (prev > 0 ? prev - 1 : totalImages - 1) : null))
     } else {
@@ -186,7 +139,7 @@ export default function VehicleDetails({ vehicle, onBack, user, onSaveCar, saved
   // Handle keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (!isImageModalOpen) return
+      if (!isImageModalOpen || selectedImageIndex === null) return
 
       if (e.key === "Escape") {
         closeImageModal()
@@ -201,7 +154,12 @@ export default function VehicleDetails({ vehicle, onBack, user, onSaveCar, saved
     return () => {
       window.removeEventListener("keydown", handleKeyDown)
     }
-  }, [isImageModalOpen, selectedImageIndex])
+  }, [isImageModalOpen, selectedImageIndex, allDisplayableImages.length]) // Added allDisplayableImages.length
+
+  const galleryOneDisplayImages = getGalleryOneImages()
+  const galleryTwoDisplayImages = getGalleryTwoImages()
+  const galleryThreeDisplayImages = getGalleryThreeImages()
+
 
   return (
     <div className="min-h-screen">
@@ -219,40 +177,64 @@ export default function VehicleDetails({ vehicle, onBack, user, onSaveCar, saved
       </section>
 
       {/* Image Gallery */}
-      <div className="px-6 max-w-7xl mx-auto mt-4 relative">
-        <div className="gallery-container relative flex items-center">
-          {/* Removed Chevron Left and Right buttons */}
-
-          {/* Gallery Scroll Container */}
-          <div
-            ref={galleryRef}
-            className="gallery-scroll flex overflow-x-auto snap-x snap-mandatory w-full"
-          >
-            {/* Gallery 1 */}
-            <section className="gallery-section flex-shrink-0 w-full snap-center grid grid-cols-1 md:grid-cols-3 gap-4 h-[400px]"> {/* Set fixed height to match other galleries */}
-              <div className="md:col-span-2 h-full overflow-hidden rounded-lg group relative">
-                <img
-                  src={getGalleryOneImages()[0] || "/placeholder.svg?height=400&width=600"}
-                  alt={`${vehicle.make} ${vehicle.model} main view`}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 cursor-pointer"
-                  onClick={() => openImageModal(0)}
-                />
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                  <div className="bg-white/80 rounded-full p-2">
-                    <Search className="w-6 h-6 text-[#3E5641]" />
+      {allDisplayableImages.length === 0 ? (
+        <div className="px-6 max-w-7xl mx-auto mt-4 h-[400px] flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-lg">
+          <p className="text-gray-500">No images available for this vehicle.</p>
+        </div>
+      ) : (
+        <div className="px-6 max-w-7xl mx-auto mt-4 relative">
+          <div className="gallery-container relative flex items-center">
+            <div
+              className="gallery-scroll flex overflow-x-auto snap-x snap-mandatory w-full"
+            >
+              {/* Gallery 1 */}
+              {galleryOneDisplayImages.length > 0 && (
+                <section className="gallery-section flex-shrink-0 w-full snap-center grid grid-cols-1 md:grid-cols-3 gap-4 h-[400px]">
+                  <div className="md:col-span-2 h-full overflow-hidden rounded-lg group relative">
+                    <img
+                      src={galleryOneDisplayImages[0]}
+                      alt={`${vehicle.make} ${vehicle.model} main view`}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 cursor-pointer"
+                      onClick={() => openImageModal(0)}
+                    />
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                      <div className="bg-white/80 rounded-full p-2">
+                        <Search className="w-6 h-6 text-[#3E5641]" />
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4 h-full">
-                {getGalleryOneImages()
-                  .slice(1)
-                  .map((img, i) => (
-                    <div key={i} className="aspect-square overflow-hidden rounded-lg group relative h-full">
+                  {galleryOneDisplayImages.length > 1 && (
+                    <div className="grid grid-cols-2 gap-4 h-full">
+                      {galleryOneDisplayImages.slice(1).map((imgSrc, index) => (
+                        <div key={`g1-thumb-${index}`} className="aspect-square overflow-hidden rounded-lg group relative h-full">
+                          <img
+                            src={imgSrc}
+                            alt={`${vehicle.make} ${vehicle.model} view ${index + 1}`}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 cursor-pointer"
+                            onClick={() => openImageModal(index + 1)}
+                          />
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                            <div className="bg-white/80 rounded-full p-2">
+                              <Search className="w-4 h-4 text-[#3E5641]" />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </section>
+              )}
+
+              {/* Gallery 2 */}
+              {galleryTwoDisplayImages.length > 0 && (
+                <section className="gallery-section flex-shrink-0 w-full snap-center grid grid-cols-2 sm:grid-cols-4 gap-4 h-[400px]">
+                  {galleryTwoDisplayImages.map((imgSrc, index) => (
+                    <div key={`g2-img-${index}`} className="w-full h-full overflow-hidden rounded-lg group relative">
                       <img
-                        src={img || "/placeholder.svg"}
-                        alt={`${vehicle.make} ${vehicle.model} view ${i + 1}`}
+                        src={imgSrc}
+                        alt={`${vehicle.make} ${vehicle.model} additional view ${index + 5}`}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 cursor-pointer"
-                        onClick={() => openImageModal(i + 1)}
+                        onClick={() => openImageModal(index + 5)}
                       />
                       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
                         <div className="bg-white/80 rounded-full p-2">
@@ -261,57 +243,33 @@ export default function VehicleDetails({ vehicle, onBack, user, onSaveCar, saved
                       </div>
                     </div>
                   ))}
-              </div>
-            </section>
+                </section>
+              )}
 
-            {/* Gallery 2 */}
-            <section className="gallery-section flex-shrink-0 w-full snap-center grid grid-cols-4 gap-4 h-[400px]">
-              {getGalleryTwoImages().map((img, i) => (
-                <div
-                  key={i}
-                  className="w-full h-full overflow-hidden rounded-lg group relative flex"
-                  style={{ aspectRatio: "1 / 1" }}
-                >
-                  <img
-                    src={img || "/placeholder.svg"}
-                    alt={`${vehicle.make} ${vehicle.model} additional view ${i + 1}`}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 cursor-pointer"
-                    onClick={() => openImageModal(5 + i)}
-                  />
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                    <div className="bg-white/80 rounded-full p-2">
-                      <Search className="w-4 h-4 text-[#3E5641]" />
+              {/* Gallery 3 */}
+              {galleryThreeDisplayImages.length > 0 && (
+                <section className="gallery-section flex-shrink-0 w-full snap-center grid grid-cols-2 sm:grid-cols-4 gap-4 h-[400px]">
+                  {galleryThreeDisplayImages.map((imgSrc, index) => (
+                    <div key={`g3-img-${index}`} className="w-full h-full overflow-hidden rounded-lg group relative">
+                      <img
+                        src={imgSrc}
+                        alt={`${vehicle.make} ${vehicle.model} additional view ${index + 13}`}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 cursor-pointer"
+                        onClick={() => openImageModal(index + 13)}
+                      />
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                        <div className="bg-white/80 rounded-full p-2">
+                          <Search className="w-4 h-4 text-[#3E5641]" />
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
-              ))}
-            </section>
-
-            {/* Gallery 3 */}
-            <section className="gallery-section flex-shrink-0 w-full snap-center grid grid-cols-4 gap-4 h-[400px]">
-              {getGalleryThreeImages().map((img, i) => (
-                <div
-                  key={i}
-                  className="w-full h-full overflow-hidden rounded-lg group relative flex"
-                  style={{ aspectRatio: "1 / 1" }}
-                >
-                  <img
-                    src={img || "/placeholder.svg"}
-                    alt={`${vehicle.make} ${vehicle.model} additional view ${i + 1}`}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 cursor-pointer"
-                    onClick={() => openImageModal(13 + i)}
-                  />
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                    <div className="bg-white/80 rounded-full p-2">
-                      <Search className="w-4 h-4 text-[#3E5641]" />
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </section>
+                  ))}
+                </section>
+              )}
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Image Modal */}
       {isImageModalOpen && selectedImageIndex !== null && (
@@ -333,7 +291,7 @@ export default function VehicleDetails({ vehicle, onBack, user, onSaveCar, saved
           </button>
 
           <img
-            src={vehicleImages[selectedImageIndex] || "/placeholder.svg"}
+            src={allDisplayableImages[selectedImageIndex]}
             alt={`${vehicle.make} ${vehicle.model} enlarged view`}
             className="max-h-[90vh] max-w-[90vw] object-contain"
           />
@@ -635,6 +593,3 @@ export default function VehicleDetails({ vehicle, onBack, user, onSaveCar, saved
     </div>
   )
 }
-
-// Import Star icon for reviews
-import { Star, Search } from "lucide-react"

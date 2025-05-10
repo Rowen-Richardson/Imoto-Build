@@ -25,6 +25,7 @@ interface HeaderProps {
   onShowAllCars?: () => void
   onGoToSellPage?: () => void
   onSignOut?: () => void
+  transparent?: boolean; // Added transparent prop
 }
 
 export function Header({
