@@ -28,6 +28,7 @@ export default function CarMarketplace() {
   const [showUploadVehicle, setShowUploadVehicle] = useState(false); // New state for Upload Vehicle page
   const [user, setUser] = useState<UserState>(null)
   const [allVehicles, setAllVehicles] = useState<Vehicle[]>(vehicles); // State to hold all vehicles
+  const [userListedCars, setUserListedCars] = useState<Vehicle[]>([]); // State to hold cars listed by the current user
   const [filteredVehicles, setFilteredVehicles] = useState(vehicles)
   const [isSearchPage, setIsSearchPage] = useState(true)
 
@@ -256,6 +257,7 @@ export default function CarMarketplace() {
           id: `new-${Date.now()}`, // Generate a unique ID
           images: vehicleData.images || [], // Assign the array of uploaded images
           image: vehicleData.images && vehicleData.images.length > 0 ? vehicleData.images[0] : (vehicleData.image || "/placeholder.svg"), // Set the main image to the first uploaded image, or existing image, or placeholder
+          // Ensure other required fields have default or are handled by validation
           sellerName: vehicleData.sellerName || "N/A",
           sellerEmail: vehicleData.sellerEmail || "N/A",
           sellerPhone: vehicleData.sellerPhone || "N/A",
@@ -277,6 +279,8 @@ export default function CarMarketplace() {
 
       // Update the state with the new vehicle
       setAllVehicles(prevVehicles => [newVehicle, ...prevVehicles]);
+      // Add the new vehicle to the user's listed cars state
+      setUserListedCars(prevListedCars => [newVehicle, ...prevListedCars]);
 
       // Simulate API call delay
       await new Promise(resolve => setTimeout(resolve, 1000));
@@ -438,6 +442,7 @@ export default function CarMarketplace() {
         onUserUpdate={handleUserUpdate} // Pass the update handler
         onViewProfileSettings={handleViewProfileSettings} // Pass the new handler
         onViewUploadVehicle={handleViewUploadVehicle} // Pass the new handler for vehicle upload
+        listedCars={userListedCars} // Pass the user's listed cars to the dashboard
         // Pass Header navigation props
         onLoginClick={() => setShowLogin(true)} // Show login page
         onGoHome={() => setIsSearchPage(true)} // Go back to main search page

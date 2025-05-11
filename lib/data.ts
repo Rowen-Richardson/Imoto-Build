@@ -18,6 +18,7 @@ export interface Vehicle {
   bodyType: string
   engineCapacity: string
   description?: string // Added description
+  images?: string[]; // Add optional array of image URLs/base64 strings
 }
 
 export const vehicles: Vehicle[] = [

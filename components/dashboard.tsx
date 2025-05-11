@@ -21,6 +21,7 @@ interface DashboardProps {
   onViewProfileSettings: () => void // Add callback for viewing profile settings
   onViewUploadVehicle: () => void; // Add callback for viewing vehicle upload page
   onUserUpdate: (updatedData: Partial<UserProfile>) => void; // Add onUserUpdate prop
+  listedCars?: Vehicle[]; // Add listed cars prop for the recently listed section
   // Add Header navigation props (onSignOut was already present)
   onLoginClick: () => void;
   onGoHome: () => void;
@@ -28,7 +29,7 @@ interface DashboardProps {
   onGoToSellPage: () => void; // This prop seems to be intended for a sell page, will repurpose for upload for now
 }
 
-export default function Dashboard({ user, onSignOut, onBack, savedCars = [], onViewDetails, onViewProfileSettings, onViewUploadVehicle }: DashboardProps) {
+export default function Dashboard({ user, onSignOut, onBack, savedCars = [], listedCars = [], onViewDetails, onViewProfileSettings, onViewUploadVehicle }: DashboardProps) {
   const [showLikedCarsPage, setShowLikedCarsPage] = useState(false)
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null)
   const [currentCarIndex, setCurrentCarIndex] = useState(0)
@@ -359,33 +360,43 @@ export default function Dashboard({ user, onSignOut, onBack, savedCars = [], onV
                 </div>
 
                 <div className="flex-grow overflow-auto p-3">
-                  {vehicles.slice(0, 5).map((vehicle) => (
-                    <div
-                      key={vehicle.id}
-                      className="flex items-center gap-3 p-3 mb-2 rounded-xl hover:bg-gray-50 transition-colors"
-                    >
-                      <div className="w-16 h-12 rounded-lg overflow-hidden bg-gray-200 flex-shrink-0">
-                        <img
-                          src={vehicle.image || "/placeholder.svg"}
-                          alt={`${vehicle.make} ${vehicle.model}`}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                      <div className="flex-grow min-w-0">
-                        <div className="font-medium truncate">
-                          {vehicle.year} {vehicle.make} {vehicle.model}
+                  {listedCars.length > 0 ? (
+                    listedCars.map((vehicle) => (
+                      <div
+                        key={vehicle.id}
+                        className="flex items-center gap-3 p-3 mb-2 rounded-xl hover:bg-gray-50 transition-colors cursor-pointer"
+                        onClick={() => handleViewDetails(vehicle)} // Add click handler to view details
+                      >
+                        <div className="w-16 h-12 rounded-lg overflow-hidden bg-gray-200 flex-shrink-0">
+                          <img
+                            src={vehicle.image || "/placeholder.svg"}
+                            alt={`${vehicle.make} ${vehicle.model}`}
+                            className="w-full h-full object-cover"
+                          />
                         </div>
-                        <div className="text-sm text-gray-500">{vehicle.price}</div>
+                        <div className="flex-grow min-w-0">
+                          <div className="font-medium truncate">
+                            {vehicle.year} {vehicle.make} {vehicle.model}
+                          </div>
+                          <div className="text-sm text-gray-500">{vehicle.price}</div>
+                        </div>
+                        {/* Edit button - currently does nothing, could be hooked up later */}
+                        <Button variant="ghost" size="icon" className="flex-shrink-0">
+                          <Edit className="h-4 w-4" />
+                        </Button>
                       </div>
-                      <Button variant="ghost" size="icon" className="flex-shrink-0">
-                        <Edit className="h-4 w-4" />
-                      </Button>
+                    ))
+                  ) : (
+                    <div className="text-center text-gray-500 py-8">
+                      <Car className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                      <p>No cars listed yet.</p>
+                      <p className="text-sm">List your first car below!</p>
                     </div>
-                  ))}
+                  )}
                 </div>
 
                 <div className="p-4 border-t">
-                  <Button variant="outline" className="w-full">
+                  <Button variant="outline" className="w-full" onClick={onViewUploadVehicle}>
                     <Plus className="mr-2 h-4 w-4" />
                     Add New Listing
                   </Button>

@@ -1,3 +1,4 @@
+
 "use client"
 import { useState, useEffect, useMemo, useRef } from "react"
 import type React from "react"
@@ -373,16 +374,13 @@ export default function VehicleDetails({ vehicle, onBack, user, onSaveCar, saved
             {activeTab === "details" && (
               <>
                 <h2 className="text-2xl font-bold mb-4 text-[#3E5641] dark:text-white">Description</h2>
-                <p className="text-[#6F7F69] dark:text-gray-300 mb-6">
-                  This {vehicle.year} {vehicle.make} {vehicle.model} {vehicle.variant} is in excellent condition with
-                  only {vehicle.mileage} km on the odometer. It features a powerful {vehicle.engineCapacity}{" "}
-                  {vehicle.fuel} engine with {vehicle.transmission} transmission. The car has been well maintained and
-                  serviced regularly. It comes with a full service history and is ready for its new owner. Located in{" "}
-                  {vehicle.city}, {vehicle.province}, this vehicle is perfect for anyone looking for reliability and
-                  style.
-                </p>
-
-                {/* Removed Vehicle Overview section with Coming Soon */}
+                {vehicle.description ? (
+                  <p className="text-[#6F7F69] dark:text-gray-300 mb-6 whitespace-pre-wrap">{vehicle.description}</p>
+                ) : (
+                  <p className="text-[#6F7F69] dark:text-gray-300 mb-6">
+                    No specific description provided by the seller. General details: {vehicle.year} {vehicle.make} {vehicle.model} {vehicle.variant}, {vehicle.mileage} km, {vehicle.transmission}, {vehicle.fuel} engine. Located in {vehicle.city || 'N/A'}, {vehicle.province || 'N/A'}.
+                  </p>
+                )}
 
                 <div className="mt-6">
                   <h3 className="text-xl font-bold mb-4 text-[#3E5641] dark:text-white">Technical Details</h3>
