@@ -10,26 +10,16 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label" // Import Label
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription } from "@/components/ui/alert" // Import Alert components
-interface UserProfile {
-  id: string;
-  email: string;
-  firstName?: string;
-  lastName?: string;
-  profilePic?: string;
-  loginMethod?: 'email' | 'google' | 'facebook' | 'apple';
-  phone?: string;
-  suburb?: string;
-  city?: string;
-  province?: string;
-}
+import type { UserProfile } from "@/types/user"; // Import UserProfile from shared types
 
 interface ProfileSettingsProps {
   user: UserProfile
   onBack: () => void
   onSave: (updatedProfile: Partial<UserProfile>) => Promise<void> // Make onSave async if it involves API calls
+  onSignOut: () => void // Add onSignOut prop
 }
 
-export default function ProfileSettings({ user, onBack, onSave }: ProfileSettingsProps) {
+export default function ProfileSettings({ user, onBack, onSave, onSignOut }: ProfileSettingsProps) {
   // --- State ---
   const [profileImage, setProfileImage] = useState<string | undefined>(user.profilePic)
   const [formData, setFormData] = useState<Partial<UserProfile>>({
@@ -108,6 +98,13 @@ export default function ProfileSettings({ user, onBack, onSave }: ProfileSetting
     fileInputRef.current?.click()
   }
 
+  const handleSignOut = () => {
+    console.log("Attempting sign out...");
+    // Call the onSignOut prop provided by the parent
+    onSignOut();
+    // The parent component (CarMarketplace) will handle redirection/state updates
+  };
+
   const savePersonalInfo = async () => {
     setIsSavingPersonal(true)
     setPersonalError(null)
@@ -121,6 +118,7 @@ export default function ProfileSettings({ user, onBack, onSave }: ProfileSetting
 
       await onSave(updatedProfile) // Call the onSave prop passed from Dashboard
       // Optionally show a success message
+      onBack(); // Navigate back to the dashboard after successful save
     } catch (error) {
       console.error("Failed to save personal info:", error)
       setPersonalError(error instanceof Error ? error.message : "Failed to save personal info.")
@@ -181,6 +179,25 @@ export default function ProfileSettings({ user, onBack, onSave }: ProfileSetting
       // If no password fields were touched, maybe just indicate nothing to save or handle other security settings
       setIsSavingSecurity(false);
       // Optionally set a message like "No security changes to save."
+    }
+  }
+
+  // Ensure that changes in ProfileSettings are propagated to UploadVehicle via the onSave callback.
+  const handleSavePersonalInfo = async () => {
+    try {
+      setIsSavingPersonal(true)
+      setPersonalError(null)
+
+      // Call the onSave callback with updated profile data
+      await onSave(formData)
+
+      // Optionally show a success message
+      alert("Profile updated successfully!")
+    } catch (error) {
+      console.error("Failed to save personal info:", error)
+      setPersonalError("Failed to update profile. Please try again.")
+    } finally {
+      setIsSavingPersonal(false)
     }
   }
 
@@ -273,6 +290,16 @@ export default function ProfileSettings({ user, onBack, onSave }: ProfileSetting
                   </div>
                   <div className="mt-3 text-xs text-gray-500 dark:text-gray-400">
                     Logged in via: {user.loginMethod || 'email'}
+                  </div>
+                  {/* Sign Out Button */}
+                  <div className="mt-6 text-center"> {/* Added margin top for spacing */}
+                    <Button
+                      variant="destructive" // Use destructive variant for sign out
+                      onClick={handleSignOut}
+                      className="w-full" // Make button full width
+                    >
+                      Sign Out
+                    </Button>
                   </div>
                 </div>
               </Card>
@@ -490,19 +517,12 @@ export default function ProfileSettings({ user, onBack, onSave }: ProfileSetting
                          <Button variant="outline" disabled>Enable</Button>
                        </div>
                        {/* Login Sessions Placeholder */}
-                       {/* <div className="space-y-2">
+                       <div className="space-y-2">
                          <h4 className="font-medium text-[#3E5641] dark:text-white">Login Sessions (Placeholder)</h4>
                          <div className="p-4 border border-[#9FA791]/20 dark:border-[#4A4D45]/20 rounded-lg space-y-3 bg-gray-50 dark:bg-[#1F2B20]">
-                           <div className="flex items-center justify-between">
-                             <div>
-                               <p className="font-medium text-[#3E5641] dark:text-white">Current Session</p>
-                               <p className="text-sm text-gray-500 dark:text-gray-400">Location • Browser on OS</p>
-                             </div>
-                             <div className="text-sm text-green-600 font-medium">Active Now</div>
-                           </div>
-                           <Button variant="outline" size="sm" className="mt-2" disabled>Sign out all other sessions</Button>
+                           {/* Content goes here */}
                          </div>
-                       </div> */}
+                       </div>
                     </div>
                   </TabsContent>
                 </Tabs>

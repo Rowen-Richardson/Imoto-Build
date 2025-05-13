@@ -1,6 +1,8 @@
+
 "use client"
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useMemo, useRef } from "react"
 import type React from "react"
+import Image from "next/image"  // Add this import
 
 import {
   Wifi,
@@ -15,35 +17,131 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
+  Star, // Keep for review tab
+  UploadCloud, // For image upload
+  Search, // For image zoom overlay
 } from "lucide-react"
 import type { Vehicle } from "@/lib/data"
+import type { UserProfile } from "@/types/user"; // Added import
 
 interface VehicleDetailsProps {
-  vehicle: Vehicle
+  vehicle: Vehicle // Assumes Vehicle type now has vehicle.images?: string[]
   onBack: () => void
-  user?: any // Add user prop to check if logged in
+  user?: UserProfile // Changed 'any' to 'UserProfile'
   onSaveCar?: (vehicle: Vehicle) => void // Add callback for saving cars
   savedCars?: Vehicle[] // Add array of saved cars to check if this car is saved
+  isEditMode?: boolean; // To enable editing UI
+  onUpdateVehicle?: (updatedVehicle: Vehicle) => void; // Callback to save changes
 }
 
-export default function VehicleDetails({ vehicle, onBack, user, onSaveCar, savedCars = [] }: VehicleDetailsProps) {
+export default function VehicleDetails({
+  vehicle,
+  onBack,
+  user,
+  onSaveCar,
+  savedCars = [],
+  isEditMode = false,
+  onUpdateVehicle
+}: VehicleDetailsProps) {
   const [showContactForm, setShowContactForm] = useState(false)
   const [email, setEmail] = useState("")
   const [message, setMessage] = useState("")
   const [isMobile, setIsMobile] = useState(false)
   const [activeTab, setActiveTab] = useState("details")
   const [isSaved, setIsSaved] = useState(false)
-  const [currentGallery, setCurrentGallery] = useState(0)
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null)
   const [isImageModalOpen, setIsImageModalOpen] = useState(false)
-  const galleryRef = useRef<HTMLDivElement>(null)
+  const [isZoomed, setIsZoomed] = useState(false)
+  const [touchStartX, setTouchStartX] = useState(0)
+  const [imageError, setImageError] = useState(false)
+
+  // States for editable fields
+  const [editableData, setEditableData] = useState<Partial<Vehicle>>({ ...vehicle });
+  const [editableImages, setEditableImages] = useState<string[]>(
+    (vehicle.images && vehicle.images.length > 0 ? [...vehicle.images] : (vehicle.image ? [vehicle.image] : []))
+  );
+  const imageUploadRef = useRef<HTMLInputElement>(null);
+
+  // Helper function to format raw price string to "R X XXX.XX" for display
+  const formatPriceForDisplay = (rawValue: string | number | undefined | null): string => {
+    if (rawValue === undefined || rawValue === null || String(rawValue).trim() === "") {
+      return "R 0.00"; // Default display for invalid/empty price
+    }
+
+    let numericString = String(rawValue).replace(/[^\d.]/g, ''); // Keep only digits and one dot
+
+    if (numericString.startsWith('.')) {
+      numericString = '0' + numericString;
+    }
+
+    const parts = numericString.split('.');
+    let integerPart = parts[0];
+    let decimalPart = parts.length > 1 ? parts[1] : "";
+
+    if (integerPart === "" && decimalPart !== "") {
+        integerPart = "0";
+    }
+
+    const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+
+    if (decimalPart.length === 0) {
+      decimalPart = "00";
+    } else if (decimalPart.length === 1) {
+      decimalPart += "0";
+    } else if (decimalPart.length > 2) {
+      decimalPart = decimalPart.substring(0, 2);
+    }
+    return `R ${formattedInteger || "0"}.${decimalPart}`;
+  };
+
+  useEffect(() => {
+    // When vehicle or editMode changes, reset editable states
+    let initialPrice = vehicle.price;
+    // If in edit mode, ensure the price is a raw numeric string for the input field
+    if (initialPrice !== undefined && initialPrice !== null) {
+        // Convert to string, remove currency symbols, spaces, etc., keep only digits and one dot
+        let rawPrice = String(initialPrice).replace(/[^\d.]/g, '');
+        const parts = rawPrice.split('.');
+        if (parts.length > 1) { // If there's a decimal part
+            // Keep the first dot, limit decimal places to 2
+            rawPrice = parts[0] + '.' + parts.slice(1).join('').substring(0, 2);
+        }
+        // Handle cases like "." -> "0." or ".5" -> "0.5"
+        if (rawPrice === '.') rawPrice = '0.';
+        else if (rawPrice.startsWith('.')) rawPrice = '0' + rawPrice;
+        initialPrice = rawPrice; // This is now a clean numeric string or potentially empty
+    }
+
+    setEditableData({ ...vehicle, price: initialPrice });
+    setEditableImages(
+      (vehicle.images && vehicle.images.length > 0 ? [...vehicle.images] : (vehicle.image ? [vehicle.image] : []))
+    );
+  }, [vehicle, isEditMode]);
 
   // Check if this vehicle is in the saved cars list
   useEffect(() => {
-    if (savedCars.some((car) => car.id === vehicle.id)) {
-      setIsSaved(true)
-    }
+    // Correctly set isSaved based on whether the vehicle is in the savedCars prop
+    setIsSaved(savedCars.some((car) => car.id === vehicle.id));
   }, [savedCars, vehicle.id])
+
+  useEffect(() => {
+    setIsZoomed(false)
+    setImageError(false)
+  }, [selectedImageIndex])
+
+  // Add touch handlers for mobile swipe
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchStartX(e.touches[0].clientX)
+  }
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    const touchEndX = e.changedTouches[0].clientX
+    const deltaX = touchEndX - touchStartX
+
+    if (Math.abs(deltaX) > 50) { // Minimum swipe distance
+      navigateImage(deltaX > 0 ? "prev" : "next")
+    }
+  }
 
   useEffect(() => {
     const checkMobile = () => {
@@ -86,76 +184,76 @@ export default function VehicleDetails({ vehicle, onBack, user, onSaveCar, saved
     }
   }
 
-  // Generate vehicle images for the gallery
-  const generateVehicleImages = () => {
-    // In a real app, these would be different images from the vehicle
-    // For now, we'll create an array of 21 images using the main image and placeholders
-    const images = [
-      vehicle.image || "/placeholder.svg?height=400&width=600",
-      "/placeholder.svg?height=400&width=600", // Placeholder 1
-      "/placeholder.svg?height=400&width=600", // Placeholder 2
-      "/placeholder.svg?height=400&width=600", // Placeholder 3
-      "/placeholder.svg?height=400&width=600", // Placeholder 4
-      "/placeholder.svg?height=400&width=600", // Placeholder 5
-      "/placeholder.svg?height=400&width=600", // Placeholder 6
-      "/placeholder.svg?height=400&width=600", // Placeholder 7
-      "/placeholder.svg?height=400&width=600", // Placeholder 8
-      "/placeholder.svg?height=400&width=600", // Placeholder 9
-      "/placeholder.svg?height=400&width=600", // Placeholder 10
-      "/placeholder.svg?height=400&width=600", // Placeholder 11
-      "/placeholder.svg?height=400&width=600", // Placeholder 12
-      "/placeholder.svg?height=400&width=600", // Placeholder 13
-      "/placeholder.svg?height=400&width=600", // Placeholder 14
-      "/placeholder.svg?height=400&width=600", // Placeholder 15
-      "/placeholder.svg?height=400&width=600", // Placeholder 16
-      "/placeholder.svg?height=400&width=600", // Placeholder 17
-      "/placeholder.svg?height=400&width=600", // Placeholder 18
-      "/placeholder.svg?height=400&width=600", // Placeholder 19
-      "/placeholder.svg?height=400&width=600", // Placeholder 20
-    ]
-    return images
-  }
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    let processedValue: string | number | undefined = value;
 
-  const vehicleImages = generateVehicleImages()
+    if (name === "year" || name === "mileage") {
+      processedValue = value === "" ? undefined : parseInt(value.replace(/\D/g, ""), 10);
+      if (isNaN(processedValue as number)) processedValue = undefined;
+    } else if (name === "price") {
+      // Sanitize price input to store a raw numeric string (e.g., "12345.67")
+      let rawPrice = String(value).replace(/[^\d.]/g, ''); // Remove non-digits except dot
+      const parts = rawPrice.split('.');
+      if (parts.length > 1) { // If there's a decimal part
+        // Allow only one decimal point, and limit to two decimal places
+        rawPrice = parts[0] + '.' + parts.slice(1).join('').substring(0, 2);
+      }
+      // Ensure it's not just "." or starts with "." like ".50" -> "0.50"
+      if (rawPrice === '.') {
+        rawPrice = '0.';
+      } else if (rawPrice.startsWith('.')) {
+        rawPrice = '0' + rawPrice;
+      }
+      processedValue = rawPrice;
+    }
+    // For other fields, it's a direct string update
 
-  // Calculate the number of galleries needed (Gallery 1: 5 images, subsequent: 8 images)
-  // Total images: 21
-  // Gallery 1: 5 images (indices 0-4)
-  // Gallery 2: 8 images (indices 5-12)
-  // Gallery 3: 8 images (indices 13-20)
-  const totalGalleries = 3 // Fixed number of galleries as per requirement
+    setEditableData(prev => ({ ...prev, [name]: processedValue }));
+  };
+
+  const handleSaveChanges = () => {
+    if (onUpdateVehicle) {
+      const finalVehicleData: Vehicle = {
+        ...vehicle, // Start with original non-editable/non-present fields
+        ...editableData, // Override with edited fields
+        images: editableImages,
+        image: editableImages.length > 0 ? editableImages[0] : vehicle.image, // Update main image
+      };
+      onUpdateVehicle(finalVehicleData);
+    }
+  };
+
+  const allDisplayableImages = useMemo(() => {
+    return isEditMode ? editableImages : (
+      vehicle.images && vehicle.images.length > 0 ? vehicle.images : (vehicle.image ? [vehicle.image] : [])
+    );
+  }, [vehicle.images, vehicle.image, isEditMode, editableImages]);
+
+  const handleImageDelete = (indexToDelete: number) => {
+    if (!isEditMode) return;
+    setEditableImages(prev => prev.filter((_, index) => index !== indexToDelete));
+    // If deleting the image currently in modal, close modal or navigate
+    if (selectedImageIndex === indexToDelete) {
+      closeImageModal();
+    } else if (selectedImageIndex !== null && indexToDelete < selectedImageIndex) {
+      setSelectedImageIndex(prev => prev !== null ? prev -1 : null);
+    }
+  };
 
   // Get images for Gallery 1 (5 images)
   const getGalleryOneImages = () => {
-    return vehicleImages.slice(0, 5)
+    return allDisplayableImages.slice(0, 5)
   }
 
   // Get images for Gallery 2 (8 images)
   const getGalleryTwoImages = () => {
-    return vehicleImages.slice(5, 13)
+    return allDisplayableImages.slice(5, 13)
   }
 
   // Get images for Gallery 3 (8 images)
   const getGalleryThreeImages = () => {
-    return vehicleImages.slice(13, 21)
-  }
-
-  const handlePrevGallery = () => {
-    setCurrentGallery((prev) => (prev > 0 ? prev - 1 : totalGalleries - 1))
-    // Scroll to the previous gallery
-    if (galleryRef.current) {
-      const galleryWidth = galleryRef.current.offsetWidth
-      galleryRef.current.scrollBy({ left: -galleryWidth, behavior: "smooth" })
-    }
-  }
-
-  const handleNextGallery = () => {
-    setCurrentGallery((prev) => (prev < totalGalleries - 1 ? prev + 1 : 0))
-    // Scroll to the next gallery
-    if (galleryRef.current) {
-      const galleryWidth = galleryRef.current.offsetWidth
-      galleryRef.current.scrollBy({ left: galleryWidth, behavior: "smooth" })
-    }
+    return allDisplayableImages.slice(13, 21)
   }
 
   const openImageModal = (index: number) => {
@@ -175,7 +273,7 @@ export default function VehicleDetails({ vehicle, onBack, user, onSaveCar, saved
   const navigateImage = (direction: "prev" | "next") => {
     if (selectedImageIndex === null) return
 
-    const totalImages = vehicleImages.length
+    const totalImages = allDisplayableImages.length
     if (direction === "prev") {
       setSelectedImageIndex((prev) => (prev !== null ? (prev > 0 ? prev - 1 : totalImages - 1) : null))
     } else {
@@ -186,7 +284,7 @@ export default function VehicleDetails({ vehicle, onBack, user, onSaveCar, saved
   // Handle keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (!isImageModalOpen) return
+      if (!isImageModalOpen || selectedImageIndex === null) return
 
       if (e.key === "Escape") {
         closeImageModal()
@@ -201,8 +299,45 @@ export default function VehicleDetails({ vehicle, onBack, user, onSaveCar, saved
     return () => {
       window.removeEventListener("keydown", handleKeyDown)
     }
-  }, [isImageModalOpen, selectedImageIndex])
+  }, [isImageModalOpen, selectedImageIndex, allDisplayableImages.length]) // Added allDisplayableImages.length
 
+  const handleTriggerImageUpload = () => {
+    if (imageUploadRef.current) {
+      imageUploadRef.current.click();
+    }
+  };
+
+  const handleImageFilesUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const filesArray = Array.from(e.target.files);
+      const currentImageCount = editableImages.length;
+      const remainingSlots = 21 - currentImageCount;
+
+      if (remainingSlots <= 0) {
+        alert("You have reached the maximum limit of 21 images.");
+        return;
+      }
+
+      const filesToUpload = filesArray.slice(0, remainingSlots);
+      const newImageUrlsPromises = filesToUpload.map(file => {
+        return new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.readAsDataURL(file);
+        });
+      });
+
+      Promise.all(newImageUrlsPromises).then(newUrls => {
+        setEditableImages(prev => [...prev, ...newUrls]);
+      });
+
+      if (imageUploadRef.current) imageUploadRef.current.value = ""; // Reset file input
+    }
+  };
+
+  const galleryOneDisplayImages = getGalleryOneImages()
+  const galleryTwoDisplayImages = getGalleryTwoImages()
+  const galleryThreeDisplayImages = getGalleryThreeImages()
   return (
     <div className="min-h-screen">
       {/* Header Section with Back Button and Price */}
@@ -212,47 +347,112 @@ export default function VehicleDetails({ vehicle, onBack, user, onSaveCar, saved
             onClick={onBack}
             className="inline-flex items-center text-[#FF6700] dark:text-[#FF7D33] hover:underline"
           >
-            &larr; Back to Listings
+            &larr; {isEditMode ? "Cancel Edit" : "Back to Listings"}
           </button>
-          <p className="text-[#FF6700] dark:text-[#FF7D33] text-2xl md:text-3xl font-bold">{vehicle.price}</p>
+          {isEditMode ? (
+            <input
+              type="text"
+              name="price"
+              value={editableData.price || ""}
+              onChange={handleInputChange}
+              className="text-[#FF6700] dark:text-[#FF7D33] text-2xl md:text-3xl font-bold bg-transparent border-b-2 border-[#FF6700]/50 focus:border-[#FF6700] outline-none p-1 text-right w-48"
+              placeholder="Enter Price"
+            />
+          ) : (
+            <p className="text-[#FF6700] dark:text-[#FF7D33] text-2xl md:text-3xl font-bold">{formatPriceForDisplay(vehicle.price)}</p>
+          )}
         </div>
+        {isEditMode && (
+          <p className="text-sm text-gray-500 dark:text-gray-400 max-w-7xl mx-auto mt-1">You are in edit mode. Click on fields to edit them.</p>
+        )}
       </section>
 
       {/* Image Gallery */}
-      <div className="px-6 max-w-7xl mx-auto mt-4 relative">
-        <div className="gallery-container relative flex items-center">
-          {/* Removed Chevron Left and Right buttons */}
-
-          {/* Gallery Scroll Container */}
-          <div
-            ref={galleryRef}
-            className="gallery-scroll flex overflow-x-auto snap-x snap-mandatory w-full"
-          >
-            {/* Gallery 1 */}
-            <section className="gallery-section flex-shrink-0 w-full snap-center grid grid-cols-1 md:grid-cols-3 gap-4 h-[400px]"> {/* Set fixed height to match other galleries */}
-              <div className="md:col-span-2 h-full overflow-hidden rounded-lg group relative">
-                <img
-                  src={getGalleryOneImages()[0] || "/placeholder.svg?height=400&width=600"}
-                  alt={`${vehicle.make} ${vehicle.model} main view`}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 cursor-pointer"
-                  onClick={() => openImageModal(0)}
-                />
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                  <div className="bg-white/80 rounded-full p-2">
-                    <Search className="w-6 h-6 text-[#3E5641]" />
-                  </div>
-                </div>
+      {allDisplayableImages.length === 0 ? (
+        <div className="px-6 max-w-7xl mx-auto mt-4 h-[400px] flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-lg">
+          <p className="text-gray-500">No images available for this vehicle.</p>
+        </div>
+      ) : isEditMode ? (
+        <div className="px-6 max-w-7xl mx-auto mt-4">
+          <h3 className="text-xl font-semibold mb-2 text-[#3E5641] dark:text-white">Edit Images ({editableImages.length}/21)</h3>
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2 mb-4">
+            {editableImages.map((imgSrc, index) => (
+              <div key={`edit-img-${index}`} className="relative aspect-square group">
+                <img src={imgSrc} alt={`Editable view ${index + 1}`} className="w-full h-full object-cover rounded-md" />
+                <button onClick={() => handleImageDelete(index)} className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-70 group-hover:opacity-100 transition-opacity">
+                  <X className="w-3 h-3" />
+                </button>
               </div>
-              <div className="grid grid-cols-2 gap-4 h-full">
-                {getGalleryOneImages()
-                  .slice(1)
-                  .map((img, i) => (
-                    <div key={i} className="aspect-square overflow-hidden rounded-lg group relative h-full">
-                      <img
-                        src={img || "/placeholder.svg"}
-                        alt={`${vehicle.make} ${vehicle.model} view ${i + 1}`}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 cursor-pointer"
-                        onClick={() => openImageModal(i + 1)}
+            ))}
+            {editableImages.length < 21 && (
+              <button onClick={handleTriggerImageUpload} className="aspect-square border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-md flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                <UploadCloud className="w-8 h-8 mb-1" /> <span className="text-xs">Add Image</span>
+              </button>
+            )}
+          </div>
+          <input type="file" multiple accept="image/*" ref={imageUploadRef} onChange={handleImageFilesUpload} className="hidden" />
+          <p className="text-xs text-gray-500 dark:text-gray-400">You can upload up to 21 images. The first image will be the main display image. Drag and drop to reorder (feature coming soon).</p>
+        </div>
+      ) : (
+        <div className="px-6 max-w-7xl mx-auto mt-4 relative">
+          <div className="gallery-container relative flex items-center">
+            <div
+              className="gallery-scroll flex overflow-x-auto snap-x snap-mandatory w-full"
+            >
+              {/* Gallery 1 */}
+              {galleryOneDisplayImages.length > 0 && (
+                <section className="gallery-section flex-shrink-0 w-full snap-center grid grid-cols-1 md:grid-cols-3 gap-4 h-[400px]">
+                  <div className="md:col-span-2 h-full overflow-hidden rounded-lg group relative">
+                    <Image // Using Next/Image for optimization
+                      src={galleryOneDisplayImages[0]}
+                      alt={`${vehicle.make} ${vehicle.model} main view`}
+                      layout="fill"
+                      objectFit="cover"
+                      className="group-hover:scale-105 transition-transform duration-300 cursor-pointer"
+                      onClick={() => openImageModal(0)}
+                    />
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                      <div className="bg-white/80 rounded-full p-2">
+                        <Search className="w-6 h-6 text-[#3E5641]" />
+                      </div>
+                    </div>
+                  </div>
+                  {galleryOneDisplayImages.length > 1 && (
+                    <div className="grid grid-cols-2 gap-4 h-full">
+                      {galleryOneDisplayImages.slice(1).map((imgSrc, index) => (
+                        <div key={`g1-thumb-${index}`} className="aspect-square overflow-hidden rounded-lg group relative h-full">
+                          <Image
+                            src={imgSrc}
+                            alt={`${vehicle.make} ${vehicle.model} view ${index + 1}`}
+                            layout="fill"
+                            objectFit="cover"
+                            className="group-hover:scale-105 transition-transform duration-300 cursor-pointer"
+                            onClick={() => openImageModal(index + 1)}
+                          />
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                            <div className="bg-white/80 rounded-full p-2">
+                              <Search className="w-4 h-4 text-[#3E5641]" />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </section>
+              )}
+
+              {/* Gallery 2 */}
+              {galleryTwoDisplayImages.length > 0 && (
+                <section className="gallery-section flex-shrink-0 w-full snap-center grid grid-cols-2 sm:grid-cols-4 gap-4 h-[400px]">
+                  {galleryTwoDisplayImages.map((imgSrc, index) => (
+                    <div key={`g2-img-${index}`} className="w-full h-full overflow-hidden rounded-lg group relative">
+                      <Image
+                        src={imgSrc}
+                        alt={`${vehicle.make} ${vehicle.model} additional view ${index + 5}`}
+                        layout="fill"
+                        objectFit="cover"
+                        className="group-hover:scale-105 transition-transform duration-300 cursor-pointer"
+                        onClick={() => openImageModal(index + 5)}
                       />
                       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
                         <div className="bg-white/80 rounded-full p-2">
@@ -261,102 +461,138 @@ export default function VehicleDetails({ vehicle, onBack, user, onSaveCar, saved
                       </div>
                     </div>
                   ))}
-              </div>
-            </section>
+                </section>
+              )}
 
-            {/* Gallery 2 */}
-            <section className="gallery-section flex-shrink-0 w-full snap-center grid grid-cols-4 gap-4 h-[400px]">
-              {getGalleryTwoImages().map((img, i) => (
-                <div
-                  key={i}
-                  className="w-full h-full overflow-hidden rounded-lg group relative flex"
-                  style={{ aspectRatio: "1 / 1" }}
-                >
-                  <img
-                    src={img || "/placeholder.svg"}
-                    alt={`${vehicle.make} ${vehicle.model} additional view ${i + 1}`}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 cursor-pointer"
-                    onClick={() => openImageModal(5 + i)}
-                  />
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                    <div className="bg-white/80 rounded-full p-2">
-                      <Search className="w-4 h-4 text-[#3E5641]" />
+              {/* Gallery 3 */}
+              {galleryThreeDisplayImages.length > 0 && (
+                <section className="gallery-section flex-shrink-0 w-full snap-center grid grid-cols-2 sm:grid-cols-4 gap-4 h-[400px]">
+                  {galleryThreeDisplayImages.map((imgSrc, index) => (
+                    <div key={`g3-img-${index}`} className="w-full h-full overflow-hidden rounded-lg group relative">
+                      <Image
+                        src={imgSrc}
+                        alt={`${vehicle.make} ${vehicle.model} additional view ${index + 13}`}
+                        layout="fill"
+                        objectFit="cover"
+                        className="group-hover:scale-105 transition-transform duration-300 cursor-pointer"
+                        onClick={() => openImageModal(index + 13)}
+                      />
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                        <div className="bg-white/80 rounded-full p-2">
+                          <Search className="w-4 h-4 text-[#3E5641]" />
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
-              ))}
-            </section>
-
-            {/* Gallery 3 */}
-            <section className="gallery-section flex-shrink-0 w-full snap-center grid grid-cols-4 gap-4 h-[400px]">
-              {getGalleryThreeImages().map((img, i) => (
-                <div
-                  key={i}
-                  className="w-full h-full overflow-hidden rounded-lg group relative flex"
-                  style={{ aspectRatio: "1 / 1" }}
-                >
-                  <img
-                    src={img || "/placeholder.svg"}
-                    alt={`${vehicle.make} ${vehicle.model} additional view ${i + 1}`}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 cursor-pointer"
-                    onClick={() => openImageModal(13 + i)}
-                  />
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                    <div className="bg-white/80 rounded-full p-2">
-                      <Search className="w-4 h-4 text-[#3E5641]" />
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </section>
+                  ))}
+                </section>
+              )}
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Image Modal */}
-      {isImageModalOpen && selectedImageIndex !== null && (
-        <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center">
+      {isImageModalOpen && selectedImageIndex !== null && !isEditMode && ( // Disable modal in edit mode for simplicity
+        <div 
+          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Enlarged image view"
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+        >
+          {/* Close Button */}
           <button
             onClick={closeImageModal}
-            className="absolute top-4 right-4 text-white bg-black/50 hover:bg-black/70 p-2 rounded-full transition-colors"
+            className="absolute top-4 right-4 text-white bg-black/50 hover:bg-black/70 p-2 rounded-full transition-colors z-50"
             aria-label="Close image"
           >
             <X className="w-6 h-6" />
           </button>
 
-          <button
-            onClick={() => navigateImage("prev")}
-            className="absolute left-4 text-white bg-black/50 hover:bg-black/70 p-2 rounded-full transition-colors"
-            aria-label="Previous image"
-          >
-            <ChevronLeft className="w-6 h-6" />
-          </button>
+          {/* Navigation Arrows */}
+          <div className="absolute inset-0 flex items-center justify-between px-4">
+            <button
+              onClick={() => navigateImage("prev")}
+              className="text-white bg-black/50 hover:bg-black/70 p-2 rounded-full transition-colors z-50"
+              aria-label="Previous image"
+            >
+              <ChevronLeft className="w-6 h-6" />
+            </button>
+            
+            <button
+              onClick={() => navigateImage("next")}
+              className="text-white bg-black/50 hover:bg-black/70 p-2 rounded-full transition-colors z-50"
+              aria-label="Next image"
+            >
+              <ChevronRight className="w-6 h-6" />
+            </button>
+          </div>
 
-          <img
-            src={vehicleImages[selectedImageIndex] || "/placeholder.svg"}
-            alt={`${vehicle.make} ${vehicle.model} enlarged view`}
-            className="max-h-[90vh] max-w-[90vw] object-contain"
-          />
+          {/* Image Container */}
+          <div className="relative max-h-[90vh] max-w-[90vw] w-full h-full flex items-center justify-center">
+            {imageError ? (
+              <div className="text-white text-center p-4">
+                <p>Failed to load image</p>
+                <button
+                  onClick={() => setImageError(false)}
+                  className="mt-2 text-sm text-[#FF6700] hover:underline"
+                >
+                  Try again
+                </button>
+              </div>
+            ) : (
+              <div className={`relative w-full h-full transition-transform duration-300 ${
+                isZoomed ? 'cursor-zoom-out' : 'cursor-zoom-in'
+              }`}>
+                <Image
+                  src={allDisplayableImages[selectedImageIndex]}
+                  alt={`${vehicle.make} ${vehicle.model} enlarged view`}
+                  fill
+                  className={`object-contain transition-transform duration-300 ${
+                    isZoomed ? 'scale-150' : 'scale-100'
+                  }`}
+                  priority
+                  onError={() => setImageError(true)}
+                  onDoubleClick={() => setIsZoomed(!isZoomed)}
+                />
+              </div>
+            )}
 
-          <button
-            onClick={() => navigateImage("next")}
-            className="absolute right-4 text-white bg-black/50 hover:bg-[#3E5641]/70 transition-colors"
-            aria-label="Next image"
-          >
-            <ChevronRight className="w-6 h-6" />
-          </button>
-
-          {/* Removed image index text */}
+            {/* Image Position Indicator */}
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/50 text-white px-3 py-1 rounded-full text-sm">
+              {selectedImageIndex + 1} / {allDisplayableImages.length}
+            </div>
+          </div>
         </div>
       )}
 
       {/* Vehicle Title and Details */}
       <div className="px-6 max-w-7xl mx-auto mt-4">
         <div className="flex justify-between items-center mb-2">
-          <h2 className="text-2xl md:text-3xl font-bold text-[#3E5641] dark:text-white">
-            {vehicle.year} {vehicle.make} {vehicle.model} {vehicle.variant}
-          </h2>
-          <div className="flex gap-4">
+          {isEditMode ? (
+            <div className="flex flex-col sm:flex-row gap-2 w-full">
+              <input type="number" name="year" placeholder="Year" value={editableData.year || ""} onChange={handleInputChange} className="form-input-edit text-xl font-bold" />
+              <input type="text" name="make" placeholder="Make" value={editableData.make || ""} onChange={handleInputChange} className="form-input-edit text-xl font-bold" />
+              <input type="text" name="model" placeholder="Model" value={editableData.model || ""} onChange={handleInputChange} className="form-input-edit text-xl font-bold" />
+              <input type="text" name="variant" placeholder="Variant (Optional)" value={editableData.variant || ""} onChange={handleInputChange} className="form-input-edit text-xl" />
+            </div>
+          ) : (
+            <h2 className="text-2xl md:text-3xl font-bold text-[#3E5641] dark:text-white">
+              {vehicle.year} {vehicle.make} {vehicle.model} {vehicle.variant}
+            </h2>
+          )}
+          <div className="flex gap-4 items-center">
+            {isEditMode && (
+                <button
+                    onClick={handleSaveChanges}
+                    className="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+                >
+                    Save Changes
+                </button>
+            )}
+            {!isEditMode && ( // Only show sponsored and save if not in edit mode
+            <>
             <div className="bg-[#9FA791]/20 dark:bg-[#4A4D45]/40 px-3 py-1.5 rounded-full text-sm text-[#3E5641] dark:text-white">
               Sponsored
             </div>
@@ -369,15 +605,26 @@ export default function VehicleDetails({ vehicle, onBack, user, onSaveCar, saved
               />
               <span>{isSaved ? "Saved" : "Save"}</span>
             </button>
+            </>
+            )}
           </div>
         </div>
 
-        <p className="text-[#6F7F69] dark:text-gray-300 mb-2">
-          Mileage: {vehicle.mileage} km | Transmission: {vehicle.transmission} | Fuel: {vehicle.fuel} | Engine:{" "}
-          {vehicle.engineCapacity}
-        </p>
+        {isEditMode ? (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-2">
+            <input type="number" name="mileage" placeholder="Mileage (km)" value={editableData.mileage || ""} onChange={handleInputChange} className="form-input-edit-sm" />
+            <input type="text" name="transmission" placeholder="Transmission" value={editableData.transmission || ""} onChange={handleInputChange} className="form-input-edit-sm" />
+            <input type="text" name="fuel" placeholder="Fuel Type" value={editableData.fuel || ""} onChange={handleInputChange} className="form-input-edit-sm" />
+            <input type="text" name="engineCapacity" placeholder="Engine (e.g., 2.0L)" value={editableData.engineCapacity || ""} onChange={handleInputChange} className="form-input-edit-sm" />
+          </div>
+        ) : (
+          <p className="text-[#6F7F69] dark:text-gray-300 mb-2">
+            Mileage: {vehicle.mileage} km | Transmission: {vehicle.transmission} | Fuel: {vehicle.fuel} | Engine:{" "}
+            {vehicle.engineCapacity}
+          </p>
+        )}
       </div>
-
+      
       {/* Tabs Section */}
       <div className="border-b border-[#9FA791]/20 dark:border-[#4A4D45]/20 mt-4">
         <div className="px-6 max-w-7xl mx-auto flex space-x-8">
@@ -388,19 +635,19 @@ export default function VehicleDetails({ vehicle, onBack, user, onSaveCar, saved
             Details
           </button>
           <button
-            className={`py-3 font-medium ${activeTab === "report" ? "border-b-2 border-[#FF6700] dark:border-[#FF7D33] text-[#3E5641] dark:text-white" : "text-[#6F7F69] dark:text-gray-400 hover:text-[#3E5641] dark:hover:text-white"}`}
+            className={`py-3 font-medium filter blur-sm ${activeTab === "report" ? "border-b-2 border-[#FF6700] dark:border-[#FF7D33] text-[#3E5641] dark:text-white" : "text-[#6F7F69] dark:text-gray-400 hover:text-[#3E5641] dark:hover:text-white"}`}
             onClick={() => setActiveTab("report")}
           >
             Vehicle Report
           </button>
           <button
-            className={`py-3 font-medium ${activeTab === "insurance" ? "border-b-2 border-[#FF6700] dark:border-[#FF7D33] text-[#3E5641] dark:text-white" : "text-[#6F7F69] dark:text-gray-400 hover:text-[#3E5641] dark:hover:text-white"}`}
+            className={`py-3 font-medium filter blur-sm ${activeTab === "insurance" ? "border-b-2 border-[#FF6700] dark:border-[#FF7D33] text-[#3E5641] dark:text-white" : "text-[#6F7F69] dark:text-gray-400 hover:text-[#3E5641] dark:hover:text-white"}`}
             onClick={() => setActiveTab("insurance")}
           >
             Insurance Quote
           </button>
           <button
-            className={`py-3 font-medium ${activeTab === "review" ? "border-b-2 border-[#FF6700] dark:border-[#FF7D33] text-[#3E5641] dark:text-white" : "text-[#6F7F69] dark:text-gray-400 hover:text-[#3E5641] dark:hover:text-white"}`}
+            className={`py-3 font-medium filter blur-sm ${activeTab === "review" ? "border-b-2 border-[#FF6700] dark:border-[#FF7D33] text-[#3E5641] dark:text-white" : "text-[#6F7F69] dark:text-gray-400 hover:text-[#3E5641] dark:hover:text-white"}`}
             onClick={() => setActiveTab("review")}
           >
             Vehicle Review
@@ -415,54 +662,55 @@ export default function VehicleDetails({ vehicle, onBack, user, onSaveCar, saved
             {activeTab === "details" && (
               <>
                 <h2 className="text-2xl font-bold mb-4 text-[#3E5641] dark:text-white">Description</h2>
-                <p className="text-[#6F7F69] dark:text-gray-300 mb-6">
-                  This {vehicle.year} {vehicle.make} {vehicle.model} {vehicle.variant} is in excellent condition with
-                  only {vehicle.mileage} km on the odometer. It features a powerful {vehicle.engineCapacity}{" "}
-                  {vehicle.fuel} engine with {vehicle.transmission} transmission. The car has been well maintained and
-                  serviced regularly. It comes with a full service history and is ready for its new owner. Located in{" "}
-                  {vehicle.city}, {vehicle.province}, this vehicle is perfect for anyone looking for reliability and
-                  style.
-                </p>
-
-                {/* Removed Vehicle Overview section with Coming Soon */}
+                {isEditMode ? (
+                  <textarea
+                    name="description"
+                    value={editableData.description || ""}
+                    onChange={handleInputChange}
+                    className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md min-h-[150px] text-[#3E5641] dark:text-white bg-white dark:bg-[#2A352A] focus:ring-2 focus:ring-[#FF6700] dark:focus:ring-[#FF7D33]"
+                    placeholder="Enter vehicle description..."
+                  />
+                ) : (
+                  vehicle.description ? (
+                    <p className="text-[#6F7F69] dark:text-gray-300 mb-6 whitespace-pre-wrap">{vehicle.description}</p>
+                  ) : (
+                    <p className="text-[#6F7F69] dark:text-gray-300 mb-6">
+                      No specific description provided by the seller. General details: {vehicle.year} {vehicle.make} {vehicle.model} {vehicle.variant}, {vehicle.mileage} km, {vehicle.transmission}, {vehicle.fuel} engine. Located in {vehicle.city || 'N/A'}, {vehicle.province || 'N/A'}.
+                    </p>
+                  )
+                )}
 
                 <div className="mt-6">
                   <h3 className="text-xl font-bold mb-4 text-[#3E5641] dark:text-white">Technical Details</h3>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div>
-                      <p className="text-[#6F7F69] dark:text-gray-400 text-sm">Make</p>
-                      <p className="text-[#3E5641] dark:text-white">{vehicle.make}</p>
-                    </div>
-                    <div>
-                      <p className="text-[#6F7F69] dark:text-gray-400 text-sm">Model</p>
-                      <p className="text-[#3E5641] dark:text-white">
-                        {vehicle.model} {vehicle.variant}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-[#6F7F69] dark:text-gray-400 text-sm">Year</p>
-                      <p className="text-[#3E5641] dark:text-white">{vehicle.year}</p>
-                    </div>
-                    <div>
-                      <p className="text-[#6F7F69] dark:text-gray-400 text-sm">Mileage</p>
-                      <p className="text-[#3E5641] dark:text-white">{vehicle.mileage} km</p>
-                    </div>
-                    <div>
-                      <p className="text-[#6F7F69] dark:text-gray-400 text-sm">Transmission</p>
-                      <p className="text-[#3E5641] dark:text-white">{vehicle.transmission}</p>
-                    </div>
-                    <div>
-                      <p className="text-[#6F7F69] dark:text-gray-400 text-sm">Fuel</p>
-                      <p className="text-[#3E5641] dark:text-white">{vehicle.fuel}</p>
-                    </div>
-                    <div>
-                      <p className="text-[#6F7F69] dark:text-gray-400 text-sm">Engine</p>
-                      <p className="text-[#3E5641] dark:text-white">{vehicle.engineCapacity}</p>
-                    </div>
-                    <div>
-                      <p className="text-[#6F7F69] dark:text-gray-400 text-sm">Body Type</p>
-                      <p className="text-[#3E5641] dark:text-white">{vehicle.bodyType}</p>
-                    </div>
+                    {isEditMode ? (
+                      <>
+                        <EditableField label="Make" name="make" value={editableData.make} onChange={handleInputChange} />
+                        <EditableField label="Model" name="model" value={editableData.model} onChange={handleInputChange} />
+                        <EditableField label="Variant" name="variant" value={editableData.variant} onChange={handleInputChange} placeholder="Optional" />
+                        <EditableField label="Year" name="year" type="number" value={editableData.year} onChange={handleInputChange} />
+                        <EditableField label="Mileage (km)" name="mileage" type="number" value={editableData.mileage} onChange={handleInputChange} />
+                        <EditableField label="Transmission" name="transmission" value={editableData.transmission} onChange={handleInputChange} />
+                        <EditableField label="Fuel Type" name="fuel" value={editableData.fuel} onChange={handleInputChange} />
+                        <EditableField label="Engine Capacity" name="engineCapacity" value={editableData.engineCapacity} onChange={handleInputChange} />
+                        <EditableField label="Body Type" name="bodyType" value={editableData.bodyType} onChange={handleInputChange} />
+                        <EditableField label="City" name="city" value={editableData.city} onChange={handleInputChange} />
+                        <EditableField label="Province" name="province" value={editableData.province} onChange={handleInputChange} />
+                      </>
+                    ) : (
+                      <>
+                        <div><p className="detail-label">Make</p><p className="detail-value">{vehicle.make}</p></div>
+                        <div><p className="detail-label">Model</p><p className="detail-value">{vehicle.model} {vehicle.variant}</p></div>
+                        <div><p className="detail-label">Year</p><p className="detail-value">{vehicle.year}</p></div>
+                        <div><p className="detail-label">Mileage</p><p className="detail-value">{vehicle.mileage} km</p></div>
+                        <div><p className="detail-label">Transmission</p><p className="detail-value">{vehicle.transmission}</p></div>
+                        <div><p className="detail-label">Fuel</p><p className="detail-value">{vehicle.fuel}</p></div>
+                        <div><p className="detail-label">Engine</p><p className="detail-value">{vehicle.engineCapacity}</p></div>
+                        <div><p className="detail-label">Body Type</p><p className="detail-value">{vehicle.bodyType}</p></div>
+                        <div><p className="detail-label">City</p><p className="detail-value">{vehicle.city}</p></div>
+                        <div><p className="detail-label">Province</p><p className="detail-value">{vehicle.province}</p></div>
+                      </>
+                    )}
                   </div>
                 </div>
               </>
@@ -470,54 +718,63 @@ export default function VehicleDetails({ vehicle, onBack, user, onSaveCar, saved
 
             {activeTab === "report" && (
               <div className="relative">
-                <h2 className="text-2xl font-bold mb-4 text-[#3E5641] dark:text-white">Vehicle Report</h2>
-                {/* Removed blur and Coming Soon overlay */}
-                <div className="h-[400px] w-full bg-[#f5f5f5] dark:bg-[#2A352A] rounded-lg flex items-center justify-center"> {/* Removed blur-[2px] */}
-                  <div className="text-center">
-                    <Car className="w-16 h-16 mx-auto mb-4 text-[#9FA791] dark:text-[#4A4D45]" />
-                    <p className="text-lg font-medium text-[#6F7F69] dark:text-gray-400">
-                      Comprehensive vehicle history report
-                    </p>
-                    <p className="text-sm text-[#9FA791] dark:text-[#4A4D45] mt-2">
-                      Including accident history, service records, and ownership details
-                    </p>
+                <h2 className="text-2xl font-bold mb-4 text-[#3E5641] dark:text-white filter blur-sm">Vehicle Report</h2>
+                <div className="relative h-[400px] w-full rounded-lg">
+                  <div className="h-full w-full bg-[#f5f5f5] dark:bg-[#2A352A] rounded-lg flex items-center justify-center filter blur-sm">
+                    <div className="text-center">
+                      <Car className="w-16 h-16 mx-auto mb-4 text-[#9FA791] dark:text-[#4A4D45]" />
+                      <p className="text-lg font-medium text-[#6F7F69] dark:text-gray-400">
+                        Comprehensive vehicle history report
+                      </p>
+                      <p className="text-sm text-[#9FA791] dark:text-[#4A4D45] mt-2">
+                        Including accident history, service records, and ownership details
+                      </p>
+                    </div>
+                  </div>
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-lg">
+                    <p className="text-white text-2xl font-semibold">Coming Soon</p>
                   </div>
                 </div>
-                {/* Removed Coming Soon overlay div */}
               </div>
             )}
 
             {activeTab === "insurance" && (
               <div className="relative">
-                <h2 className="text-2xl font-bold mb-4 text-[#3E5641] dark:text-white">Insurance Quote</h2>
-                {/* Removed blur and Coming Soon overlay */}
-                <div className="h-[400px] w-full bg-[#f5f5f5] dark:bg-[#2A352A] rounded-lg flex items-center justify-center"> {/* Removed blur-[2px] */}
-                  <div className="text-center">
-                    <Shield className="w-16 h-16 mx-auto mb-4 text-[#9FA791] dark:text-[#4A4D45]" />
-                    <p className="text-lg font-medium text-[#6F7F69] dark:text-gray-400">
-                      Get instant insurance quotes
-                    </p>
-                    <p className="text-sm text-[#9FA791] dark:text-[#4A4D45] mt-2">
-                      Compare rates from multiple providers
-                    </p>
+                <h2 className="text-2xl font-bold mb-4 text-[#3E5641] dark:text-white filter blur-sm">Insurance Quote</h2>
+                <div className="relative h-[400px] w-full rounded-lg">
+                  <div className="h-full w-full bg-[#f5f5f5] dark:bg-[#2A352A] rounded-lg flex items-center justify-center filter blur-sm">
+                    <div className="text-center">
+                      <Shield className="w-16 h-16 mx-auto mb-4 text-[#9FA791] dark:text-[#4A4D45]" />
+                      <p className="text-lg font-medium text-[#6F7F69] dark:text-gray-400">
+                        Get instant insurance quotes
+                      </p>
+                      <p className="text-sm text-[#9FA791] dark:text-[#4A4D45] mt-2">
+                        Compare rates from multiple providers
+                      </p>
+                    </div>
+                  </div>
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-lg">
+                    <p className="text-white text-2xl font-semibold">Coming Soon</p>
                   </div>
                 </div>
-                {/* Removed Coming Soon overlay div */}
               </div>
             )}
 
             {activeTab === "review" && (
               <div className="relative">
-                <h2 className="text-2xl font-bold mb-4 text-[#3E5641] dark:text-white">Vehicle Review</h2>
-                {/* Removed blur and Coming Soon overlay */}
-                <div className="h-[400px] w-full bg-[#f5f5f5] dark:bg-[#2A352A] rounded-lg flex items-center justify-center"> {/* Removed blur-[2px] */}
-                  <div className="text-center">
-                    <Star className="w-16 h-16 mx-auto mb-4 text-[#9FA791] dark:text-[#4A4D45]" />
-                    <p className="text-lg font-medium text-[#6F7F69] dark:text-gray-400">Expert vehicle reviews</p>
-                    <p className="text-sm text-[#9FA791] dark:text-[#4A4D45] mt-2">Detailed analysis and ratings</p>
+                <h2 className="text-2xl font-bold mb-4 text-[#3E5641] dark:text-white filter blur-sm">Vehicle Review</h2>
+                <div className="relative h-[400px] w-full rounded-lg">
+                  <div className="h-full w-full bg-[#f5f5f5] dark:bg-[#2A352A] rounded-lg flex items-center justify-center filter blur-sm">
+                    <div className="text-center">
+                      <Star className="w-16 h-16 mx-auto mb-4 text-[#9FA791] dark:text-[#4A4D45]" />
+                      <p className="text-lg font-medium text-[#6F7F69] dark:text-gray-400">Expert vehicle reviews</p>
+                      <p className="text-sm text-[#9FA791] dark:text-[#4A4D45] mt-2">Detailed analysis and ratings</p>
+                    </div>
+                  </div>
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-lg">
+                    <p className="text-white text-2xl font-semibold">Coming Soon</p>
                   </div>
                 </div>
-                {/* Removed Coming Soon overlay div */}
               </div>
             )}
           </div>
@@ -525,7 +782,7 @@ export default function VehicleDetails({ vehicle, onBack, user, onSaveCar, saved
           {/* Contact Seller Section */}
           <div className="lg:col-span-1">
             <div className="bg-[#3E5641]/80 dark:bg-[#1F2B20]/80 backdrop-blur-lg rounded-xl shadow-lg p-8 border border-white/10">
-              <h3 className="text-xl font-bold mb-6 text-white">Contact Seller</h3>
+              <h3 className="text-xl font-bold mb-6 text-white">{isEditMode ? "Edit Seller Information" : "Contact Seller"}</h3>
 
               {showContactForm ? (
                 <form onSubmit={handleSubmit} className="space-y-4">
@@ -573,46 +830,27 @@ export default function VehicleDetails({ vehicle, onBack, user, onSaveCar, saved
                   </div>
                 </form>
               ) : (
-                <div className="space-y-5 text-white">
-                  <div>
-                    <p className="text-gray-300 text-sm">Seller</p>
-                    <p>{vehicle.sellerName}</p>
+                isEditMode ? (
+                  <div className="space-y-3">
+                    <EditableField label="Seller Name" name="sellerName" value={editableData.sellerName} onChange={handleInputChange} textWhite={true} />
+                    <EditableField label="Seller Phone" name="sellerPhone" value={editableData.sellerPhone} onChange={handleInputChange} textWhite={true} />
+                    <EditableField label="Seller Email" name="sellerEmail" type="email" value={editableData.sellerEmail} onChange={handleInputChange} textWhite={true} />
+                    <EditableField label="Seller Address" name="sellerAddress" value={editableData.sellerAddress} onChange={handleInputChange} textWhite={true} isTextarea={true} />
                   </div>
-                  <div>
-                    <p className="text-gray-300 text-sm">Phone</p>
-                    <div className="flex items-center">
-                      <Phone className="w-4 h-4 mr-2 text-[#FF6700] dark:text-[#FF7D33]" />
-                      <p>{vehicle.sellerPhone}</p>
-                    </div>
+                ) : (
+                  <div className="space-y-5 text-white">
+                    <div><p className="contact-label">Seller</p><p>{vehicle.sellerName}</p></div>
+                    <div><p className="contact-label">Phone</p><div className="flex items-center"><Phone className="contact-icon" /><p>{vehicle.sellerPhone}</p></div></div>
+                    <div><p className="contact-label">Email</p><div className="flex items-center"><Mail className="contact-icon" /><p>{vehicle.sellerEmail}</p></div></div>
+                    <div><p className="contact-label">Address</p><p>{vehicle.sellerAddress}</p></div>
+                    <button
+                      onClick={handleContactClick}
+                      className="w-full bg-[#FF6700] dark:bg-[#FF7D33] text-white font-medium py-3 rounded-xl hover:bg-[#FF6700]/90 dark:hover:bg-[#FF7D33]/90 transition-colors mt-4 flex justify-center items-center"
+                    >
+                      {isMobile ? <><Phone className="w-5 h-5 mr-2" />Call Seller</> : <><Mail className="w-5 h-5 mr-2" />Contact Seller</>}
+                    </button>
                   </div>
-                  <div>
-                    <p className="text-gray-300 text-sm">Email</p>
-                    <div className="flex items-center">
-                      <Mail className="w-4 h-4 mr-2 text-[#FF6700] dark:text-[#FF7D33]" />
-                      <p>{vehicle.sellerEmail}</p>
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-gray-300 text-sm">Address</p>
-                    <p>{vehicle.sellerAddress}</p>
-                  </div>
-                  <button
-                    onClick={handleContactClick}
-                    className="w-full bg-[#FF6700] dark:bg-[#FF7D33] text-white font-medium py-3 rounded-xl hover:bg-[#FF6700]/90 dark:hover:bg-[#FF7D33]/90 transition-colors mt-4 flex justify-center items-center"
-                  >
-                    {isMobile ? (
-                      <>
-                        <Phone className="w-5 h-5 mr-2" />
-                        Call Seller
-                      </>
-                    ) : (
-                      <>
-                        <Mail className="w-5 h-5 mr-2" />
-                        Contact Seller
-                      </>
-                    )}
-                  </button>
-                </div>
+                )
               )}
             </div>
 
@@ -636,5 +874,23 @@ export default function VehicleDetails({ vehicle, onBack, user, onSaveCar, saved
   )
 }
 
-// Import Star icon for reviews
-import { Star, Search } from "lucide-react"
+// Helper component for editable fields to reduce repetition
+const EditableField = ({ label, name, value, onChange, type = "text", placeholder, textWhite = false, isTextarea = false }: {
+  label: string;
+  name: keyof Vehicle;
+  value: any;
+  onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
+  type?: string;
+  placeholder?: string;
+  textWhite?: boolean;
+  isTextarea?: boolean;
+}) => (
+  <div>
+    <label htmlFor={name} className={`block text-sm font-medium ${textWhite ? 'text-gray-300' : 'text-[#6F7F69] dark:text-gray-400'} mb-1`}>{label}</label>
+    {isTextarea ? (
+      <textarea id={name} name={name} value={value || ""} onChange={onChange} placeholder={placeholder || label} className={`form-input-edit w-full min-h-[80px] ${textWhite ? 'bg-[#576B55] dark:bg-[#2A352A] text-white placeholder-gray-400' : ''}`} />
+    ) : (
+      <input type={type} id={name} name={name} value={value || ""} onChange={onChange} placeholder={placeholder || label} className={`form-input-edit w-full ${textWhite ? 'bg-[#576B55] dark:bg-[#2A352A] text-white placeholder-gray-400' : ''}`} />
+    )}
+  </div>
+);

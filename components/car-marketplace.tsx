@@ -7,10 +7,12 @@ import VehicleDetails from "./vehicle-details"
 import LocationPage from "./location-page"
 import LoginPage from "./login-page"
 import Dashboard from "./dashboard"
+import UploadVehicle from "./upload-vehicle"; // Import the new UploadVehicle component
 import { vehicles } from "@/lib/data"
 import type { Vehicle } from "@/lib/data"
-import type { UserProfile } from "./dashboard"; // Import UserProfile from dashboard.tsx
+import type { UserProfile } from "@/types/user"; // Import UserProfile from shared types
 import { Header } from "./ui/header"
+import ProfileSettings from "./profile-settings"; // Import ProfileSettings component
 
 // Define the user state type more explicitly, matching UserProfile
 type UserState = UserProfile | null
@@ -22,9 +24,15 @@ export default function CarMarketplace() {
   const [selectedProvince, setSelectedProvince] = useState<string | null>(null) // For province page navigation
   const [showLogin, setShowLogin] = useState(false)
   const [showDashboard, setShowDashboard] = useState(false)
+  const [showProfileSettings, setShowProfileSettings] = useState(false) // New state for Profile Settings
+  const [showUploadVehicle, setShowUploadVehicle] = useState(false); // New state for Upload Vehicle page
+  const [vehicleToEdit, setVehicleToEdit] = useState<Vehicle | null>(null); // State for the vehicle being edited
   const [user, setUser] = useState<UserState>(null)
+  const [allVehicles, setAllVehicles] = useState<Vehicle[]>(vehicles); // State to hold all vehicles
+  const [userListedCars, setUserListedCars] = useState<Vehicle[]>([]); // State to hold cars listed by the current user
   const [filteredVehicles, setFilteredVehicles] = useState(vehicles)
   const [isSearchPage, setIsSearchPage] = useState(true)
+  const [savedCars, setSavedCars] = useState<Vehicle[]>([]); // State to hold saved cars
 
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedTerms, setSelectedTerms] = useState<string[]>([])
@@ -48,10 +56,42 @@ export default function CarMarketplace() {
     }
   }, [])
 
-  // Initialize vehicles on mount
+  // Helper function to format raw price string to "R X XXX.XX" for display
+  const formatPriceForDisplay = (rawValue: string | number | undefined | null): string => {
+    if (rawValue === undefined || rawValue === null || String(rawValue).trim() === "") {
+      return "R 0.00"; // Default display for invalid/empty price
+    }
+
+    let numericString = String(rawValue).replace(/[^\d.]/g, ''); // Keep only digits and one dot
+
+    if (numericString.startsWith('.')) {
+      numericString = '0' + numericString;
+    }
+
+    const parts = numericString.split('.');
+    let integerPart = parts[0];
+    let decimalPart = parts.length > 1 ? parts[1] : "";
+
+    if (integerPart === "" && decimalPart !== "") {
+        integerPart = "0";
+    }
+
+    const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+
+    if (decimalPart.length === 0) {
+      decimalPart = "00";
+    } else if (decimalPart.length === 1) {
+      decimalPart += "0";
+    } else if (decimalPart.length > 2) {
+      decimalPart = decimalPart.substring(0, 2);
+    }
+    return `R ${formattedInteger || "0"}.${decimalPart}`;
+  };
+
+  // Initialize filtered vehicles on mount or when allVehicles changes
   useEffect(() => {
-    setFilteredVehicles(vehicles)
-  }, [])
+    setFilteredVehicles(allVehicles)
+  }, [allVehicles]) // Depend on allVehicles
 
   const generateSuggestions = (input: string) => {
     if (!input.trim()) {
@@ -62,7 +102,8 @@ export default function CarMarketplace() {
     const lowerInput = input.toLowerCase()
     const uniqueSuggestions = new Set<string>()
 
-    vehicles.forEach((vehicle) => {
+    // Use allVehicles for suggestions
+    allVehicles.forEach((vehicle) => {
       // Suggest Make
       if (vehicle.make.toLowerCase().includes(lowerInput)) {
         uniqueSuggestions.add(vehicle.make)
@@ -133,7 +174,7 @@ export default function CarMarketplace() {
     const searchString = selectedTerms.join(" ").toLowerCase()
 
     // Apply filters
-    const filtered = vehicles.filter((vehicle) => {
+    const filtered = allVehicles.filter((vehicle) => { // Use allVehicles here
       // 1. Text Search (Make, Model, Variant)
       const vehicleText = `${vehicle.make} ${vehicle.model} ${vehicle.variant || ''}`.toLowerCase()
       const matchesSearch = !searchString || selectedTerms.every(term => vehicleText.includes(term.toLowerCase()));
@@ -144,18 +185,20 @@ export default function CarMarketplace() {
       // 3. Body Type Filter (using state `bodyType`)
       const matchesBodyType = !bodyType || (vehicle.bodyType && vehicle.bodyType === bodyType)
 
-      // 4. Price Filter
-      const vehiclePrice = Number.parseInt(vehicle.price.replace(/\D/g, "")) // Ensure price is parsed correctly
-      const matchesMinPrice = minPrice === null || isNaN(vehiclePrice) || vehiclePrice >= minPrice
-      const matchesMaxPrice = maxPrice === null || isNaN(vehiclePrice) || vehiclePrice <= maxPrice
+    // 4. Price Filter
+    // Ensure vehicle.price is treated as a string before calling replace and handle potential null/undefined
+    const vehiclePrice = vehicle.price != null ? Number.parseInt(String(vehicle.price).replace(/\D/g, "")) : NaN;
+    const matchesMinPrice = minPrice === null || isNaN(vehiclePrice) || vehiclePrice >= minPrice
+    const matchesMaxPrice = maxPrice === null || isNaN(vehiclePrice) || vehiclePrice <= maxPrice
 
-      // 5. Year Filter
-      const vehicleYear = vehicle.year; // Assuming year is a number
+    // 5. Year Filter
+    const vehicleYear = vehicle.year; // Assuming year is a number
       const matchesMinYear = minYear === null || vehicleYear >= minYear;
       const matchesMaxYear = maxYear === null || vehicleYear <= maxYear;
 
       // 6. Mileage Filter
-      const vehicleMileage = parseInt(vehicle.mileage.replace(/\D/g, ''), 10); // Parse mileage as number
+      // Ensure vehicle.mileage is treated as a string before calling replace and handle potential null/undefined
+      const vehicleMileage = vehicle.mileage != null ? parseInt(String(vehicle.mileage).replace(/\D/g, ''), 10) : NaN; // Parse mileage as number
       const matchesMinMileage = minMileage === null || isNaN(vehicleMileage) || vehicleMileage >= minMileage;
       const matchesMaxMileage = maxMileage === null || isNaN(vehicleMileage) || vehicleMileage <= maxMileage;
 
@@ -211,6 +254,91 @@ export default function CarMarketplace() {
     // Add more as needed
   ]
 
+  // Handler to navigate to Profile Settings
+  const handleViewProfileSettings = () => {
+    setShowProfileSettings(true);
+    setShowDashboard(false); // Hide dashboard
+    setShowUploadVehicle(false); // Hide upload page
+    setIsSearchPage(false); // Ensure search page is not visible
+  };
+
+  // Handler to navigate back from Profile Settings to Dashboard
+  const handleBackFromProfileSettings = () => {
+    setShowProfileSettings(false);
+    setShowDashboard(true); // Show dashboard again
+  };
+
+  // Handler to navigate to Upload Vehicle page
+  const handleViewUploadVehicle = () => {
+      setShowUploadVehicle(true);
+      setShowDashboard(false); // Hide dashboard
+      setShowProfileSettings(false); // Hide profile settings
+      setIsSearchPage(false); // Ensure search page is not visible
+  };
+
+  // Handler to navigate back from Upload Vehicle page to Dashboard
+  const handleBackFromUploadVehicle = () => {
+      setShowUploadVehicle(false);
+      setShowDashboard(true); // Show dashboard again
+  };
+
+  // Handler for submitting vehicle data
+  const handleVehicleSubmit = async (vehicleData: any) => {
+      console.log("Vehicle data submitted:", vehicleData);
+      // Simulate adding the new vehicle to the list
+      const newVehicle: Vehicle = {
+          ...vehicleData,
+          id: `new-${Date.now()}`, // Generate a unique ID
+          images: vehicleData.images || [], // Assign the array of uploaded images
+          image: vehicleData.images && vehicleData.images.length > 0 ? vehicleData.images[0] : (vehicleData.image || "/placeholder.svg"), // Set the main image to the first uploaded image, or existing image, or placeholder
+          // Ensure other required fields have default or are handled by validation
+          sellerName: vehicleData.sellerName || "N/A",
+          sellerEmail: vehicleData.sellerEmail || "N/A",
+          sellerPhone: vehicleData.sellerPhone || "N/A",
+          sellerAddress: vehicleData.sellerAddress || "N/A",
+          // Ensure other required fields have default or are handled by validation
+          make: vehicleData.make || "Unknown Make",
+          model: vehicleData.model || "Unknown Model",
+          year: parseInt(vehicleData.year) || 0,
+          price: vehicleData.price || "N/A",
+          mileage: parseInt(vehicleData.mileage) || 0,
+          transmission: vehicleData.transmission || "Unknown",
+          fuel: vehicleData.fuel || "Unknown",
+          engineCapacity: vehicleData.engineCapacity || "Unknown",
+          province: vehicleData.province || "Unknown",
+          city: vehicleData.city || "Unknown",
+          bodyType: vehicleData.bodyType || "Unknown",
+          variant: vehicleData.variant || "",
+      };
+
+      // Update the state with the new vehicle
+      setAllVehicles(prevVehicles => [newVehicle, ...prevVehicles]);
+      // Add the new vehicle to the user's listed cars state
+      setUserListedCars(prevListedCars => [newVehicle, ...prevListedCars]);
+
+      // Simulate API call delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      alert("Vehicle listed successfully!");
+      handleBackFromUploadVehicle(); // Navigate back to dashboard
+  };
+
+  // Handler to save profile settings (updates local state)
+  const handleSaveProfileSettings = async (updatedData: Partial<UserProfile>) => {
+      // Simulate API call delay if needed, or just update state directly
+      // await api.updateUserProfile(updatedData); // TODO: Implement actual API call
+      setUser((prevUser: UserState) => { // Explicitly type prevUser
+          if (!prevUser) return null;
+          const newUser = { ...prevUser, ...updatedData };
+          console.log("User state updated in CarMarketplace (from ProfileSettings):", newUser);
+          // TODO: Persist these changes to your backend/localStorage here
+          return newUser;
+      });
+      // Optionally show a success message or navigate back
+      // handleBackFromProfileSettings(); // Navigate back after save
+  };
+
+
   // When a user logs in, save their details including login method.
   const handleLoginSuccess = (userData: UserProfile) => { // Expect UserProfile
     console.log("Login Success:", userData)
@@ -222,7 +350,7 @@ export default function CarMarketplace() {
 
   // Function to update user state from Dashboard/ProfileSettings
   const handleUserUpdate = (updatedData: Partial<UserProfile>) => {
-    setUser(prevUser => {
+    setUser((prevUser: UserState) => { // Explicitly type prevUser
       if (!prevUser) return null; // Should not happen if called from Dashboard
       const newUser = { ...prevUser, ...updatedData };
       console.log("User state updated in CarMarketplace:", newUser);
@@ -241,6 +369,63 @@ export default function CarMarketplace() {
     setIsSearchPage(true) // Go back to the main search page view
   }
 
+  // Add the handleSaveCar function to manage saved cars and pass it to the Dashboard component.
+  const handleSaveCar = (vehicle: Vehicle) => {
+    setSavedCars((prevSavedCars) => {
+      const alreadySaved = prevSavedCars.some((car) => car.id === vehicle.id);
+      if (alreadySaved) {
+        return prevSavedCars.filter((car) => car.id !== vehicle.id);
+      } else {
+        return [...prevSavedCars, vehicle];
+      }
+    });
+  };
+
+  // Handler to delete a listed car
+  const handleDeleteListedCar = (vehicleToDelete: Vehicle) => {
+    // Optional: Add a confirmation dialog
+    // if (!window.confirm(`Are you sure you want to delete "${vehicleToDelete.make} ${vehicleToDelete.model}"? This action cannot be undone.`)) {
+    //   return;
+    // }
+
+    setAllVehicles(prevVehicles => prevVehicles.filter(v => v.id !== vehicleToDelete.id));
+    setUserListedCars(prevListedCars => prevListedCars.filter(v => v.id !== vehicleToDelete.id));
+    // Optionally, show a success message
+    // alert(`"${vehicleToDelete.make} ${vehicleToDelete.model}" has been deleted.`);
+  };
+
+  // Placeholder handler to edit a listed car
+  const handleEditListedCar = (vehicleToEdit: Vehicle) => {
+    console.log("Attempting to edit vehicle:", vehicleToEdit);
+    setVehicleToEdit(vehicleToEdit);
+    // Ensure other views are hidden
+    setShowDashboard(false);
+    setSelectedVehicle(null);
+    setIsSearchPage(false);
+    setShowLogin(false);
+    setShowProfileSettings(false);
+    setShowUploadVehicle(false);
+  };
+
+  // Handler to cancel editing
+  const handleCancelEdit = () => {
+    setVehicleToEdit(null);
+    setShowDashboard(true); // Go back to dashboard, or to the previous view
+  };
+
+  // Handler to update vehicle details after editing
+  const handleUpdateVehicle = (updatedVehicle: Vehicle) => {
+    setAllVehicles(prevVehicles =>
+      prevVehicles.map(v => (v.id === updatedVehicle.id ? updatedVehicle : v))
+    );
+    setUserListedCars(prevListedCars =>
+      prevListedCars.map(v => (v.id === updatedVehicle.id ? updatedVehicle : v))
+    );
+    setVehicleToEdit(null);
+    setShowDashboard(true); // Go back to dashboard
+    alert(`"${updatedVehicle.make} ${updatedVehicle.model}" has been updated successfully!`);
+  };
+
   // --- Routing Logic ---
   if (selectedProvince) {
     return (
@@ -251,7 +436,7 @@ export default function CarMarketplace() {
           onLoginClick={() => setShowLogin(true)}
           onDashboardClick={() => user ? setShowDashboard(true) : setShowLogin(true)}
           onGoHome={() => setIsSearchPage(true)}
-          onShowAllCars={() => { setFilteredVehicles(vehicles); setIsSearchPage(false); }}
+          onShowAllCars={() => { setFilteredVehicles(allVehicles); setIsSearchPage(false); }} // Use allVehicles here
           onGoToSellPage={() => alert("Sell page not implemented")}
           onSignOut={handleSignOut}
         />
@@ -259,14 +444,14 @@ export default function CarMarketplace() {
           {/* Pass province string directly */}
           <LocationPage
             province={selectedProvince}
-            vehicles={vehicles}
+            vehicles={allVehicles} // Use allVehicles here
             onBack={() => setSelectedProvince(null)}
             user={user}
             // Pass Header navigation props
             onLoginClick={() => setShowLogin(true)}
             onDashboardClick={() => user ? setShowDashboard(true) : setShowLogin(true)}
             onGoHome={() => setIsSearchPage(true)}
-            onShowAllCars={() => { setFilteredVehicles(vehicles); setIsSearchPage(false); }}
+            onShowAllCars={() => { setFilteredVehicles(allVehicles); setIsSearchPage(false); }} // Use allVehicles here
             onGoToSellPage={() => alert("Sell page not implemented")}
             onSignOut={handleSignOut}
           />
@@ -284,15 +469,49 @@ export default function CarMarketplace() {
           onLoginClick={() => setShowLogin(true)}
           onDashboardClick={() => user ? setShowDashboard(true) : setShowLogin(true)}
           onGoHome={() => setIsSearchPage(true)}
-          onShowAllCars={() => { setFilteredVehicles(vehicles); setIsSearchPage(false); }}
+          onShowAllCars={() => { setFilteredVehicles(allVehicles); setIsSearchPage(false); }} // Use allVehicles here
           onGoToSellPage={() => alert("Sell page not implemented")}
           onSignOut={handleSignOut}
         />
         <div className="pt-16 md:pt-20">
-          <VehicleDetails vehicle={selectedVehicle} onBack={() => setSelectedVehicle(null)} user={user} /> {/* Pass user prop */}
+          <VehicleDetails
+            vehicle={selectedVehicle}
+            onBack={() => setSelectedVehicle(null)}
+            user={user}
+            savedCars={savedCars} // Pass the current list of saved cars
+            onSaveCar={handleSaveCar} // Pass the handler to update saved cars
+          />
         </div>
       </>
     )
+  }
+
+  // If a vehicle is being edited, show VehicleDetails in edit mode
+  if (vehicleToEdit && user) {
+    return (
+      <>
+        <Header
+          user={user}
+          onLoginClick={() => setShowLogin(true)}
+          onDashboardClick={() => user ? setShowDashboard(true) : setShowLogin(true)}
+          onGoHome={() => { setVehicleToEdit(null); setIsSearchPage(true); }}
+          onShowAllCars={() => { setVehicleToEdit(null); setFilteredVehicles(allVehicles); setIsSearchPage(false); }}
+          onGoToSellPage={() => alert("Sell page not implemented")}
+          onSignOut={handleSignOut}
+        />
+        <div className="pt-16 md:pt-20">
+          <VehicleDetails
+            vehicle={vehicleToEdit}
+            onBack={handleCancelEdit} // This will be the "Cancel" button
+            user={user}
+            isEditMode={true}
+            onUpdateVehicle={handleUpdateVehicle}
+            savedCars={savedCars} // Pass savedCars for consistency, though not primary for editing
+            onSaveCar={handleSaveCar} // Pass onSaveCar for consistency
+          />
+        </div>
+      </>
+    );
   }
 
   if (showLogin) {
@@ -303,12 +522,36 @@ export default function CarMarketplace() {
         onCancel={() => setShowLogin(false)}
         onDashboardClick={() => user ? setShowDashboard(true) : setShowLogin(true)} // Keep existing logic
         onGoHome={() => setIsSearchPage(true)} // Go back to main search page
-        onShowAllCars={() => { setFilteredVehicles(vehicles); setIsSearchPage(false); }} // Show all cars
+        onShowAllCars={() => { setFilteredVehicles(allVehicles); setIsSearchPage(false); }} // Use allVehicles here
         onGoToSellPage={() => alert("Sell page not implemented")} // Placeholder
         onSignOut={handleSignOut} // Pass sign out handler
       />
     );
   }
+
+  if (showProfileSettings && user) {
+      return (
+          <ProfileSettings
+              user={user} // Pass the full user object
+              onBack={handleBackFromProfileSettings} // Pass handler to go back to dashboard
+              onSave={handleSaveProfileSettings} // Pass handler to save profile changes
+              onSignOut={handleSignOut} // Pass the sign out handler
+          />
+      );
+  }
+
+  // Render UploadVehicle page if showUploadVehicle is true and user is logged in
+  if (showUploadVehicle && user) {
+      return (
+          <UploadVehicle
+              user={user} // Pass the full user object
+              onBack={handleBackFromUploadVehicle} // Pass handler to go back to dashboard
+              onVehicleSubmit={handleVehicleSubmit} // Pass the submit handler
+              onSaveProfile={handleSaveProfileSettings} // Pass handler to save profile changes
+          />
+      );
+  }
+
 
   if (showDashboard && user) {
     return (
@@ -323,10 +566,18 @@ export default function CarMarketplace() {
             // setFilteredVehicles(vehicles); // Resetting here
         }}
         onUserUpdate={handleUserUpdate} // Pass the update handler
+        onViewProfileSettings={handleViewProfileSettings} // Pass the new handler
+        onViewUploadVehicle={handleViewUploadVehicle} // Pass the new handler for vehicle upload
+        listedCars={userListedCars} // Pass the user's listed cars to the dashboard
+        savedCars={savedCars}
+        onViewDetails={setSelectedVehicle}
+        onEditListedCar={handleEditListedCar} // Pass the edit handler
+        onDeleteListedCar={handleDeleteListedCar} // Pass the delete handler
+        onSaveCar={handleSaveCar} // Ensure this prop is passed correctly
         // Pass Header navigation props
         onLoginClick={() => setShowLogin(true)} // Show login page
         onGoHome={() => setIsSearchPage(true)} // Go back to main search page
-        onShowAllCars={() => { setFilteredVehicles(vehicles); setIsSearchPage(false); }} // Show all cars
+        onShowAllCars={() => { setFilteredVehicles(allVehicles); setIsSearchPage(false); }} // Use allVehicles here
         onGoToSellPage={() => alert("Sell page not implemented")} // Placeholder
       />
     )
@@ -340,7 +591,7 @@ export default function CarMarketplace() {
         onLoginClick={() => setShowLogin(true)}
         onDashboardClick={() => user ? setShowDashboard(true) : setShowLogin(true)} // Show dashboard if logged in, else login
         onGoHome={() => setIsSearchPage(true)} // Go back to main search page
-        onShowAllCars={() => { setFilteredVehicles(vehicles); setIsSearchPage(false); }} // Show all cars
+        onShowAllCars={() => { setFilteredVehicles(allVehicles); setIsSearchPage(false); }} // Use allVehicles here
         onGoToSellPage={() => alert("Sell page not implemented")} // Placeholder
         onSignOut={handleSignOut} // Pass sign out handler
         transparent={isSearchPage} // Header is transparent only on the initial search page
@@ -599,7 +850,7 @@ export default function CarMarketplace() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
                 {/* Display first 6 vehicles as featured */}
-                {vehicles.slice(0, 6).map((vehicle) => (
+                {allVehicles.slice(0, 6).map((vehicle) => (
                   <div
                     key={vehicle.id}
                     className="bg-white dark:bg-[#2A352A] border border-[#9FA791]/20 dark:border-[#4A4D45]/20 rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer flex flex-col overflow-hidden group"
@@ -607,7 +858,7 @@ export default function CarMarketplace() {
                   >
                     <div className="relative h-48 w-full overflow-hidden">
                        <img
-                          src={vehicle.image || "/placeholder.svg"} // Use placeholder if no image
+                          src={(vehicle.images && vehicle.images.length > 0 ? vehicle.images[0] : vehicle.image) || "/placeholder.svg"}
                           alt={`${vehicle.make} ${vehicle.model} ${vehicle.variant || ''}`}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                        />
@@ -616,7 +867,7 @@ export default function CarMarketplace() {
                       <h3 className="text-lg font-semibold mb-2 text-[#3E5641] dark:text-white">
                         {vehicle.year} {vehicle.make} {vehicle.model} {vehicle.variant || ''}
                       </h3>
-                      <p className="text-[#FF6700] dark:text-[#FF7D33] font-bold text-lg mb-3">{vehicle.price}</p>
+                      <p className="text-[#FF6700] dark:text-[#FF7D33] font-bold text-lg mb-3">{formatPriceForDisplay(vehicle.price)}</p>
                       <div className="text-sm opacity-70 text-[#6F7F69] dark:text-gray-300 mb-4">
                          {vehicle.mileage} km &bull; {vehicle.transmission} &bull; {vehicle.fuel}
                       </div>
@@ -639,7 +890,7 @@ export default function CarMarketplace() {
               <div className="text-center mt-12">
                 <button
                   onClick={() => {
-                      setFilteredVehicles(vehicles); // Show all vehicles
+                      setFilteredVehicles(allVehicles); // Show all vehicles
                       setIsSearchPage(false); // Go to results view
                       window.scrollTo(0, 0); // Scroll to top
                   }}
@@ -674,7 +925,7 @@ export default function CarMarketplace() {
                     <li><a href="#" className="text-sm text-gray-300 hover:text-[#FF7D33]">Our Story</a></li>
                     <li><a href="#" className="text-sm text-gray-300 hover:text-[#FF7D33]">Careers</a></li>
                     <li><a href="#" className="text-sm text-gray-300 hover:text-[#FF7D33]">Press</a></li>
-                    <li><a href="#" className="text-sm text-gray-300 hover:text-[#FF7D33]">Contact Us</a></li>
+                    <li><a href="#" className="text-sm text-[#FF7D33]">Contact Us</a></li>
                   </ul>
                 </div>
                 <div>
@@ -743,7 +994,7 @@ export default function CarMarketplace() {
                    >
                      <div className="relative h-48 w-full overflow-hidden">
                        <img
-                          src={vehicle.image || "/placeholder.svg"}
+                          src={(vehicle.images && vehicle.images.length > 0 ? vehicle.images[0] : vehicle.image) || "/placeholder.svg"}
                           alt={`${vehicle.make} ${vehicle.model}`}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                        />
@@ -752,7 +1003,7 @@ export default function CarMarketplace() {
                        <h3 className="text-lg font-semibold mb-2 text-[#3E5641] dark:text-white">
                          {vehicle.year} {vehicle.make} {vehicle.model} {vehicle.variant || ''}
                        </h3>
-                       <p className="text-[#FF6700] dark:text-[#FF7D33] font-bold text-lg mb-3">{vehicle.price}</p>
+                       <p className="text-[#FF6700] dark:text-[#FF7D33] font-bold text-lg mb-3">{formatPriceForDisplay(vehicle.price)}</p>
                        <div className="text-sm opacity-70 text-[#6F7F69] dark:text-gray-300 mb-4">
                          {vehicle.mileage} km &bull; {vehicle.transmission} &bull; {vehicle.fuel}
                        </div>

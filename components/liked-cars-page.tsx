@@ -4,23 +4,15 @@ import { useState } from "react"
 import { Heart, Search, ArrowLeft } from "lucide-react"
 import type { Vehicle } from "@/lib/data"
 import { Header } from "./ui/header"
-// Assuming UserProfile is defined elsewhere (e.g., in dashboard.tsx or a shared types file)
-import type { UserProfile } from "./dashboard"; // Import UserProfile from dashboard.tsx for now
 
 interface LikedCarsPageProps {
   likedVehicles: Vehicle[]
   onBack: () => void
   onViewDetails: (vehicle: Vehicle) => void
-  user: UserProfile | null
-  // Add missing Header props to LikedCarsPageProps
-  onLoginClick: () => void;
-  onGoHome: () => void;
-  onShowAllCars: () => void;
-  onGoToSellPage: () => void;
-  onSignOut: () => void;
+  user: any
 }
 
-export default function LikedCarsPage({ likedVehicles, onBack, onViewDetails, user, onLoginClick, onGoHome, onShowAllCars, onGoToSellPage, onSignOut }: LikedCarsPageProps) {
+export default function LikedCarsPage({ likedVehicles, onBack, onViewDetails, user }: LikedCarsPageProps) {
   const [searchTerm, setSearchTerm] = useState("")
 
   const filteredVehicles = likedVehicles.filter((vehicle) =>
@@ -29,18 +21,7 @@ export default function LikedCarsPage({ likedVehicles, onBack, onViewDetails, us
 
   return (
     <div className="min-h-screen">
-      {/* Pass required Header props */}
-      {/* Pass required Header props */}
-      <Header
-        user={user}
-        onLoginClick={onLoginClick} // Use prop
-        onDashboardClick={onBack} // Go back to Dashboard
-        onGoHome={onGoHome} // Use prop
-        onShowAllCars={onShowAllCars} // Use prop
-        onGoToSellPage={onGoToSellPage} // Use prop
-        onSignOut={onSignOut} // Use prop
-        transparent={false}
-      />
+      <Header user={user} transparent={false} />
 
       <div className="pt-20 pb-10">
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
