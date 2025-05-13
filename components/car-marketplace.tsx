@@ -26,11 +26,13 @@ export default function CarMarketplace() {
   const [showDashboard, setShowDashboard] = useState(false)
   const [showProfileSettings, setShowProfileSettings] = useState(false) // New state for Profile Settings
   const [showUploadVehicle, setShowUploadVehicle] = useState(false); // New state for Upload Vehicle page
+  const [vehicleToEdit, setVehicleToEdit] = useState<Vehicle | null>(null); // State for the vehicle being edited
   const [user, setUser] = useState<UserState>(null)
   const [allVehicles, setAllVehicles] = useState<Vehicle[]>(vehicles); // State to hold all vehicles
   const [userListedCars, setUserListedCars] = useState<Vehicle[]>([]); // State to hold cars listed by the current user
   const [filteredVehicles, setFilteredVehicles] = useState(vehicles)
   const [isSearchPage, setIsSearchPage] = useState(true)
+  const [savedCars, setSavedCars] = useState<Vehicle[]>([]); // State to hold saved cars
 
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedTerms, setSelectedTerms] = useState<string[]>([])
@@ -53,6 +55,38 @@ export default function CarMarketplace() {
       document.removeEventListener("mousedown", handleClickOutside)
     }
   }, [])
+
+  // Helper function to format raw price string to "R X XXX.XX" for display
+  const formatPriceForDisplay = (rawValue: string | number | undefined | null): string => {
+    if (rawValue === undefined || rawValue === null || String(rawValue).trim() === "") {
+      return "R 0.00"; // Default display for invalid/empty price
+    }
+
+    let numericString = String(rawValue).replace(/[^\d.]/g, ''); // Keep only digits and one dot
+
+    if (numericString.startsWith('.')) {
+      numericString = '0' + numericString;
+    }
+
+    const parts = numericString.split('.');
+    let integerPart = parts[0];
+    let decimalPart = parts.length > 1 ? parts[1] : "";
+
+    if (integerPart === "" && decimalPart !== "") {
+        integerPart = "0";
+    }
+
+    const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+
+    if (decimalPart.length === 0) {
+      decimalPart = "00";
+    } else if (decimalPart.length === 1) {
+      decimalPart += "0";
+    } else if (decimalPart.length > 2) {
+      decimalPart = decimalPart.substring(0, 2);
+    }
+    return `R ${formattedInteger || "0"}.${decimalPart}`;
+  };
 
   // Initialize filtered vehicles on mount or when allVehicles changes
   useEffect(() => {
@@ -335,6 +369,63 @@ export default function CarMarketplace() {
     setIsSearchPage(true) // Go back to the main search page view
   }
 
+  // Add the handleSaveCar function to manage saved cars and pass it to the Dashboard component.
+  const handleSaveCar = (vehicle: Vehicle) => {
+    setSavedCars((prevSavedCars) => {
+      const alreadySaved = prevSavedCars.some((car) => car.id === vehicle.id);
+      if (alreadySaved) {
+        return prevSavedCars.filter((car) => car.id !== vehicle.id);
+      } else {
+        return [...prevSavedCars, vehicle];
+      }
+    });
+  };
+
+  // Handler to delete a listed car
+  const handleDeleteListedCar = (vehicleToDelete: Vehicle) => {
+    // Optional: Add a confirmation dialog
+    // if (!window.confirm(`Are you sure you want to delete "${vehicleToDelete.make} ${vehicleToDelete.model}"? This action cannot be undone.`)) {
+    //   return;
+    // }
+
+    setAllVehicles(prevVehicles => prevVehicles.filter(v => v.id !== vehicleToDelete.id));
+    setUserListedCars(prevListedCars => prevListedCars.filter(v => v.id !== vehicleToDelete.id));
+    // Optionally, show a success message
+    // alert(`"${vehicleToDelete.make} ${vehicleToDelete.model}" has been deleted.`);
+  };
+
+  // Placeholder handler to edit a listed car
+  const handleEditListedCar = (vehicleToEdit: Vehicle) => {
+    console.log("Attempting to edit vehicle:", vehicleToEdit);
+    setVehicleToEdit(vehicleToEdit);
+    // Ensure other views are hidden
+    setShowDashboard(false);
+    setSelectedVehicle(null);
+    setIsSearchPage(false);
+    setShowLogin(false);
+    setShowProfileSettings(false);
+    setShowUploadVehicle(false);
+  };
+
+  // Handler to cancel editing
+  const handleCancelEdit = () => {
+    setVehicleToEdit(null);
+    setShowDashboard(true); // Go back to dashboard, or to the previous view
+  };
+
+  // Handler to update vehicle details after editing
+  const handleUpdateVehicle = (updatedVehicle: Vehicle) => {
+    setAllVehicles(prevVehicles =>
+      prevVehicles.map(v => (v.id === updatedVehicle.id ? updatedVehicle : v))
+    );
+    setUserListedCars(prevListedCars =>
+      prevListedCars.map(v => (v.id === updatedVehicle.id ? updatedVehicle : v))
+    );
+    setVehicleToEdit(null);
+    setShowDashboard(true); // Go back to dashboard
+    alert(`"${updatedVehicle.make} ${updatedVehicle.model}" has been updated successfully!`);
+  };
+
   // --- Routing Logic ---
   if (selectedProvince) {
     return (
@@ -383,10 +474,44 @@ export default function CarMarketplace() {
           onSignOut={handleSignOut}
         />
         <div className="pt-16 md:pt-20">
-          <VehicleDetails vehicle={selectedVehicle} onBack={() => setSelectedVehicle(null)} user={user} /> {/* Pass user prop */}
+          <VehicleDetails
+            vehicle={selectedVehicle}
+            onBack={() => setSelectedVehicle(null)}
+            user={user}
+            savedCars={savedCars} // Pass the current list of saved cars
+            onSaveCar={handleSaveCar} // Pass the handler to update saved cars
+          />
         </div>
       </>
     )
+  }
+
+  // If a vehicle is being edited, show VehicleDetails in edit mode
+  if (vehicleToEdit && user) {
+    return (
+      <>
+        <Header
+          user={user}
+          onLoginClick={() => setShowLogin(true)}
+          onDashboardClick={() => user ? setShowDashboard(true) : setShowLogin(true)}
+          onGoHome={() => { setVehicleToEdit(null); setIsSearchPage(true); }}
+          onShowAllCars={() => { setVehicleToEdit(null); setFilteredVehicles(allVehicles); setIsSearchPage(false); }}
+          onGoToSellPage={() => alert("Sell page not implemented")}
+          onSignOut={handleSignOut}
+        />
+        <div className="pt-16 md:pt-20">
+          <VehicleDetails
+            vehicle={vehicleToEdit}
+            onBack={handleCancelEdit} // This will be the "Cancel" button
+            user={user}
+            isEditMode={true}
+            onUpdateVehicle={handleUpdateVehicle}
+            savedCars={savedCars} // Pass savedCars for consistency, though not primary for editing
+            onSaveCar={handleSaveCar} // Pass onSaveCar for consistency
+          />
+        </div>
+      </>
+    );
   }
 
   if (showLogin) {
@@ -422,6 +547,7 @@ export default function CarMarketplace() {
               user={user} // Pass the full user object
               onBack={handleBackFromUploadVehicle} // Pass handler to go back to dashboard
               onVehicleSubmit={handleVehicleSubmit} // Pass the submit handler
+              onSaveProfile={handleSaveProfileSettings} // Pass handler to save profile changes
           />
       );
   }
@@ -443,6 +569,11 @@ export default function CarMarketplace() {
         onViewProfileSettings={handleViewProfileSettings} // Pass the new handler
         onViewUploadVehicle={handleViewUploadVehicle} // Pass the new handler for vehicle upload
         listedCars={userListedCars} // Pass the user's listed cars to the dashboard
+        savedCars={savedCars}
+        onViewDetails={setSelectedVehicle}
+        onEditListedCar={handleEditListedCar} // Pass the edit handler
+        onDeleteListedCar={handleDeleteListedCar} // Pass the delete handler
+        onSaveCar={handleSaveCar} // Ensure this prop is passed correctly
         // Pass Header navigation props
         onLoginClick={() => setShowLogin(true)} // Show login page
         onGoHome={() => setIsSearchPage(true)} // Go back to main search page
@@ -736,7 +867,7 @@ export default function CarMarketplace() {
                       <h3 className="text-lg font-semibold mb-2 text-[#3E5641] dark:text-white">
                         {vehicle.year} {vehicle.make} {vehicle.model} {vehicle.variant || ''}
                       </h3>
-                      <p className="text-[#FF6700] dark:text-[#FF7D33] font-bold text-lg mb-3">{vehicle.price}</p>
+                      <p className="text-[#FF6700] dark:text-[#FF7D33] font-bold text-lg mb-3">{formatPriceForDisplay(vehicle.price)}</p>
                       <div className="text-sm opacity-70 text-[#6F7F69] dark:text-gray-300 mb-4">
                          {vehicle.mileage} km &bull; {vehicle.transmission} &bull; {vehicle.fuel}
                       </div>
@@ -872,7 +1003,7 @@ export default function CarMarketplace() {
                        <h3 className="text-lg font-semibold mb-2 text-[#3E5641] dark:text-white">
                          {vehicle.year} {vehicle.make} {vehicle.model} {vehicle.variant || ''}
                        </h3>
-                       <p className="text-[#FF6700] dark:text-[#FF7D33] font-bold text-lg mb-3">{vehicle.price}</p>
+                       <p className="text-[#FF6700] dark:text-[#FF7D33] font-bold text-lg mb-3">{formatPriceForDisplay(vehicle.price)}</p>
                        <div className="text-sm opacity-70 text-[#6F7F69] dark:text-gray-300 mb-4">
                          {vehicle.mileage} km &bull; {vehicle.transmission} &bull; {vehicle.fuel}
                        </div>

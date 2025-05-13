@@ -182,6 +182,25 @@ export default function ProfileSettings({ user, onBack, onSave, onSignOut }: Pro
     }
   }
 
+  // Ensure that changes in ProfileSettings are propagated to UploadVehicle via the onSave callback.
+  const handleSavePersonalInfo = async () => {
+    try {
+      setIsSavingPersonal(true)
+      setPersonalError(null)
+
+      // Call the onSave callback with updated profile data
+      await onSave(formData)
+
+      // Optionally show a success message
+      alert("Profile updated successfully!")
+    } catch (error) {
+      console.error("Failed to save personal info:", error)
+      setPersonalError("Failed to update profile. Please try again.")
+    } finally {
+      setIsSavingPersonal(false)
+    }
+  }
+
   // --- Helpers ---
   const getInitials = () => {
     return (
@@ -498,19 +517,12 @@ export default function ProfileSettings({ user, onBack, onSave, onSignOut }: Pro
                          <Button variant="outline" disabled>Enable</Button>
                        </div>
                        {/* Login Sessions Placeholder */}
-                       {/* <div className="space-y-2">
+                       <div className="space-y-2">
                          <h4 className="font-medium text-[#3E5641] dark:text-white">Login Sessions (Placeholder)</h4>
                          <div className="p-4 border border-[#9FA791]/20 dark:border-[#4A4D45]/20 rounded-lg space-y-3 bg-gray-50 dark:bg-[#1F2B20]">
-                           <div className="flex items-center justify-between">
-                             <div>
-                               <p className="font-medium text-[#3E5641] dark:text-white">Current Session</p>
-                               <p className="text-sm text-gray-500 dark:text-gray-400">Location • Browser on OS</p>
-                             </div>
-                             <div className="text-sm text-green-600 font-medium">Active Now</div>
-                           </div>
-                           <Button variant="outline" size="sm" className="mt-2" disabled>Sign out all other sessions</Button>
+                           {/* Content goes here */}
                          </div>
-                       </div> */}
+                       </div>
                     </div>
                   </TabsContent>
                 </Tabs>

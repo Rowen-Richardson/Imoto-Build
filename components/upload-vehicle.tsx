@@ -2,10 +2,10 @@
 
 import type React from "react"
 import Image from "next/image"
-import { useState, useRef, useEffect } from "react"
-import { ArrowLeft, Camera, Save, AlertCircle, XCircle, Edit, Check, Grip } from "lucide-react"
+import { useState, useRef, useEffect, ElementType } from "react"
+import { ArrowLeft, Camera, Save, AlertCircle, XCircle, Edit, Check, Grip, Car, Truck, Bike } from "lucide-react" // Added Car, Truck, Bike
 import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card" // CardContent might not be used directly but good practice
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -18,23 +18,38 @@ interface UploadVehicleProps {
   onSaveProfile?: (updatedProfile: Partial<UserProfile>) => Promise<void> // Callback to save profile changes
 }
 
-// Define engine capacity options
-const engineCapacityOptions = [
-  { value: "1.0-1.5", label: "1.0L - 1.5L" },
-  { value: "1.6-2.0", label: "1.6L - 2.0L" },
-  { value: "2.1-3.0", label: "2.1L - 3.0L" },
-  { value: "3.1+", label: "3.1L+" },
-]
+// Generate more granular engine capacity options
+const generateEngineCapacityOptions = () => {
+  const options = [];
+  for (let i = 0.8; i <= 8.0; i += 0.1) {
+    const value = `${i.toFixed(1)}L`;
+    options.push({ value, label: value });
+  }
+  options.push({ value: "8.0L+", label: "8.0L+" }); // For capacities above 8.0L
+  return options;
+};
+const engineCapacityOptionsList = generateEngineCapacityOptions();
 
-// Define body type options with icons
-const bodyTypeOptions = [
-  { value: "Sedan", label: "Sedan", icon: "car" },
-  { value: "SUV", label: "SUV", icon: "car" },
-  { value: "Truck", label: "Truck", icon: "truck" },
-  { value: "Motorcycle", label: "Motorcycle", icon: "bike" },
-  { value: "Hatchback", label: "Hatchback", icon: "car" },
-  { value: "Convertible", label: "Convertible", icon: "car" },
-]
+// Define expanded body type options with Lucide icons
+const bodyTypeOptionsList: { value: string; label: string; IconComponent: ElementType }[] = [
+  { value: "Sedan", label: "Sedan", IconComponent: Car },
+  { value: "SUV", label: "SUV (Sport Utility Vehicle)", IconComponent: Car },
+  { value: "Hatchback", label: "Hatchback", IconComponent: Car },
+  { value: "Bakkie", label: "Bakkie / Pick-up", IconComponent: Truck },
+  { value: "Double Cab", label: "Double Cab Bakkie", IconComponent: Truck },
+  { value: "Extended Cab", label: "Extended Cab Bakkie", IconComponent: Truck },
+  { value: "Single Cab", label: "Single Cab Bakkie", IconComponent: Truck },
+  { value: "Coupe", label: "Coupe", IconComponent: Car },
+  { value: "Convertible", label: "Convertible / Cabriolet", IconComponent: Car },
+  { value: "Minivan", label: "Minivan / MPV", IconComponent: Car },
+  { value: "Panel Van", label: "Panel Van", IconComponent: Truck },
+  { value: "Minibus", label: "Minibus / Kombi", IconComponent: Car },
+  { value: "Bus", label: "Bus", IconComponent: Car },
+  { value: "Motorcycle", label: "Motorcycle", IconComponent: Bike },
+  { value: "Scooter", label: "Scooter", IconComponent: Bike },
+  { value: "Off-road", label: "Off-road / 4x4 Vehicle", IconComponent: Car },
+  { value: "Station Wagon", label: "Station Wagon", IconComponent: Car },
+];
 
 export default function UploadVehicle({ user, onBack, onVehicleSubmit, onSaveProfile }: UploadVehicleProps) {
   // --- State ---
@@ -42,7 +57,6 @@ export default function UploadVehicle({ user, onBack, onVehicleSubmit, onSavePro
   const [isDragging, setIsDragging] = useState<boolean>(false)
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
   const [dropTargetIndex, setDropTargetIndex] = useState<number | null>(null)
-  const [isCustomEngineCapacity, setIsCustomEngineCapacity] = useState(false)
 
   const [formData, setFormData] = useState({
     make: "",
@@ -78,6 +92,20 @@ export default function UploadVehicle({ user, onBack, onVehicleSubmit, onSavePro
 
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  // State for searchable Engine Capacity dropdown
+  const [engineCapacitySearch, setEngineCapacitySearch] = useState("");
+  const [engineCapacityFiltered, setEngineCapacityFiltered] = useState(engineCapacityOptionsList);
+  const [showEngineCapacityDropdown, setShowEngineCapacityDropdown] = useState(false);
+  const engineCapacityRef = useRef<HTMLDivElement>(null);
+
+  // State for searchable Body Type dropdown
+  const [bodyTypeSearch, setBodyTypeSearch] = useState("");
+  const [bodyTypeFiltered, setBodyTypeFiltered] = useState(bodyTypeOptionsList);
+  const [showBodyTypeDropdown, setShowBodyTypeDropdown] = useState(false);
+  const bodyTypeRef = useRef<HTMLDivElement>(null);
+
+
+
   // Effect to update seller info in formData if user profile changes externally
   useEffect(() => {
     setFormData((prev) => ({
@@ -97,28 +125,165 @@ export default function UploadVehicle({ user, onBack, onVehicleSubmit, onSavePro
     })
   }, [user])
 
+  // Effect to sync search input fields with formData if it changes (e.g. on initial load)
+  useEffect(() => {
+    const selectedEngineOption = engineCapacityOptionsList.find(opt => opt.value === formData.engineCapacity);
+    setEngineCapacitySearch(selectedEngineOption ? selectedEngineOption.label : formData.engineCapacity || "");
+  }, [formData.engineCapacity]);
+
+  useEffect(() => {
+    const selectedBodyTypeOption = bodyTypeOptionsList.find(opt => opt.value === formData.bodyType);
+    setBodyTypeSearch(selectedBodyTypeOption ? selectedBodyTypeOption.label : formData.bodyType || "");
+  }, [formData.bodyType]);
+
+  // Effect for handling clicks outside of the custom dropdowns
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (engineCapacityRef.current && !engineCapacityRef.current.contains(event.target as Node)) {
+        setShowEngineCapacityDropdown(false);
+      }
+      if (bodyTypeRef.current && !bodyTypeRef.current.contains(event.target as Node)) {
+        setShowBodyTypeDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
   // --- Handlers ---
   const handleInputChange = (
     event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>,
-  ): void => {
+  ): void => { // General input handler, excluding price
     const { name, value } = event.target
-
-    // Special handling for engine capacity
-    if (name === "engineCapacity" && event.target.id === "engineCapacity" && value === "custom") {
-      setIsCustomEngineCapacity(true)
-      return // Don't update formData yet
-    } else if (name === "engineCapacity") {
-      setIsCustomEngineCapacity(false)
-    }
-
     setFormData((prev) => ({ ...prev, [name]: value }))
     setSubmitError(null) // Clear error on input change
+  }
+
+  // Helper function to format raw price string to "R X XXX.XX"
+  const formatPriceForDisplay = (rawValue: string | undefined): string => {
+    if (rawValue === undefined || rawValue === null || rawValue.trim() === "") {
+      return ""; // Let placeholder show
+    }
+    // Handle if rawValue is just a dot, meaning user is about to type decimals
+    if (rawValue === ".") {
+      return "R 0.";
+    }
+
+    const parts = rawValue.split('.');
+    const integerPart = parts[0];
+    const decimalPart = parts.length > 1 ? parts[1] : "";
+
+    const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+    
+    return `R ${formattedInteger || "0"}.${decimalPart.padEnd(2, '0')}`;
+  };
+
+  const handlePriceInputChange = (event: React.ChangeEvent<HTMLInputElement>): void => {
+    const inputValue = event.target.value; // Current value in the input field
+    const previousRawPrice = formData.price || ""; // The last valid raw price string, default to empty string
+
+    let newRawPrice = "";
+
+    // Remove "R" prefix and all spaces to get a condensed string for parsing
+    const condensedValue = inputValue.replace(/^R\s*/, '').replace(/\s/g, '');
+
+    if (inputValue.trim() === "" || inputValue.trim().toLowerCase() === "r") {
+      // Handle empty input or just "R" -> clear raw price
+      newRawPrice = "";
+    } else if (condensedValue === ".") {
+      // User typed only a decimal point
+      newRawPrice = "0.";
+    } else {
+      // Special case: previous raw price was an integer (e.g., "1"),
+      // display was "R 1.00", user types "2", input becomes "R 1.002".
+      // We want new raw price to be "12".
+      const prevIsInteger = !previousRawPrice.includes('.');
+      // Escape previousRawPrice for regex, in case it had special characters (though unlikely for price)
+      const escapedPrevRawPrice = previousRawPrice.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const pattern = new RegExp(`^${escapedPrevRawPrice}\\.00(\\d)$`);
+      const specificMatch = condensedValue.match(pattern);
+
+      if (prevIsInteger && previousRawPrice !== "" && specificMatch && specificMatch[1]) {
+        newRawPrice = previousRawPrice + specificMatch[1];
+      } else {
+        // General parsing for other cases:
+        // Extract a string of digits, allowing one decimal, max two decimal places.
+        let result = "";
+        let decimalSeparatorFound = false;
+        let decimalDigitsCount = 0;
+
+        for (const char of condensedValue) {
+          if (char >= '0' && char <= '9') {
+            if (decimalSeparatorFound) {
+              if (decimalDigitsCount < 2) {
+                result += char;
+                decimalDigitsCount++;
+              }
+            } else {
+              result += char;
+            }
+          } else if (char === '.' && !decimalSeparatorFound) {
+            result += char; // Add the first decimal point
+            decimalSeparatorFound = true;
+          }
+        }
+        // Post-process the parsed result
+        if (result.startsWith('.')) newRawPrice = "0" + result; // ".25" -> "0.25"
+        else if (result === "" && condensedValue !== "") newRawPrice = ""; // Invalid characters resulted in empty, but input wasn't "R" or ""
+        else newRawPrice = result;
+      }
+    }
+
+    setFormData((prev) => ({ ...prev, price: newRawPrice }));
+    setSubmitError(null);
   }
 
   const handleSellerInputChange = (event: React.ChangeEvent<HTMLInputElement>): void => {
     const { name, value } = event.target
     setSellerFormData((prev) => ({ ...prev, [name]: value }))
   }
+
+  // Handlers for Engine Capacity Searchable Dropdown
+  const handleEngineCapacitySearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const searchTerm = e.target.value;
+    setEngineCapacitySearch(searchTerm);
+    setFormData(prev => ({ ...prev, engineCapacity: searchTerm })); // Store typed text
+    setEngineCapacityFiltered(
+      engineCapacityOptionsList.filter(option =>
+        option.label.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    );
+    setShowEngineCapacityDropdown(true);
+  };
+
+  const handleEngineCapacitySelect = (option: { value: string; label: string }) => {
+    setFormData(prev => ({ ...prev, engineCapacity: option.value }));
+    setEngineCapacitySearch(option.label);
+    setShowEngineCapacityDropdown(false);
+    setSubmitError(null);
+  };
+
+  // Handlers for Body Type Searchable Dropdown
+  const handleBodyTypeSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const searchTerm = e.target.value;
+    setBodyTypeSearch(searchTerm);
+    setFormData(prev => ({ ...prev, bodyType: searchTerm })); // Store typed text
+    setBodyTypeFiltered(
+      bodyTypeOptionsList.filter(option =>
+        option.label.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    );
+    setShowBodyTypeDropdown(true);
+  };
+
+  const handleBodyTypeSelect = (option: { value: string; label: string; IconComponent: ElementType }) => {
+    setFormData(prev => ({ ...prev, bodyType: option.value }));
+    setBodyTypeSearch(option.label);
+    setShowBodyTypeDropdown(false);
+    setSubmitError(null);
+  };
 
   // Ensure that changes in UploadVehicle are propagated to ProfileSettings via the onSaveProfile callback.
   const handleSaveSellerInfo = async () => {
@@ -700,14 +865,14 @@ export default function UploadVehicle({ user, onBack, onVehicleSubmit, onSavePro
                         <Input
                           id="price"
                           name="price"
-                          type="number"
-                          value={formData.price}
-                          onChange={handleInputChange}
-                          placeholder="e.g., 150000"
+                          type="text" // Use text type for custom formatting
+                          value={formatPriceForDisplay(formData.price)}
+                          onChange={handlePriceInputChange}
+                          placeholder="R 0.00" // Updated placeholder
                           className="border-[#9FA791] dark:border-[#4A4D45] focus:border-[#FF6700] dark:focus:border-[#FF7D33] focus:ring-[#FF6700] dark:focus:ring-[#FF7D33] dark:bg-[#1F2B20] dark:text-white"
                           disabled={isSubmitting}
-                          min="0"
-                          step="1000"
+                          // min and step attributes are not applicable for type="text"
+                          // but you can add custom validation if needed
                         />
                       </div>
 
@@ -794,70 +959,84 @@ export default function UploadVehicle({ user, onBack, onVehicleSubmit, onSavePro
                       </div>
 
                       <div className="space-y-1.5">
-                        <Label
-                          htmlFor="engineCapacity"
-                          className="text-sm font-medium text-[#3E5641] dark:text-gray-300"
-                        >
-                          Engine Capacity
-                        </Label>
-                        <div className="flex flex-col space-y-2">
-                          <select
-                            id="engineCapacity"
+                        <div className="relative" ref={engineCapacityRef}>
+                          <Label htmlFor="engineCapacityInput" className="text-sm font-medium text-[#3E5641] dark:text-gray-300">
+                            Engine Capacity
+                          </Label>
+                          <Input
+                            id="engineCapacityInput"
                             name="engineCapacity"
-                            value={formData.engineCapacity}
-                            onChange={(e) => {
-                              if (e.target.value === "custom") {
-                                // If "custom" is selected, don't update the formData yet
-                                // The user will input a custom value in the text field
-                              } else {
-                                handleInputChange(e)
-                              }
+                            type="text"
+                            value={engineCapacitySearch}
+                            onChange={handleEngineCapacitySearchChange}
+                            onFocus={() => {
+                                setShowEngineCapacityDropdown(true);
+                                setEngineCapacityFiltered(
+                                  engineCapacitySearch
+                                    ? engineCapacityOptionsList.filter(option => option.label.toLowerCase().includes(engineCapacitySearch.toLowerCase()))
+                                    : engineCapacityOptionsList
+                                );
                             }}
-                            className="w-full px-3 py-2 rounded-lg border border-[#9FA791] dark:border-[#4A4D45] focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] appearance-none bg-white dark:bg-[#2A352A] text-[#3E5641] dark:text-white"
+                            placeholder="Type or select capacity"
+                            className="border-[#9FA791] dark:border-[#4A4D45] focus:border-[#FF6700] dark:focus:border-[#FF7D33] focus:ring-[#FF6700] dark:focus:ring-[#FF7D33] dark:bg-[#1F2B20] dark:text-white"
                             disabled={isSubmitting}
-                          >
-                            <option value="">Select Engine Capacity</option>
-                            {engineCapacityOptions.map((option) => (
-                              <option key={option.value} value={option.value}>
-                                {option.label}
-                              </option>
-                            ))}
-                            <option value="custom">Custom Value</option>
-                          </select>
-
-                          {formData.engineCapacity === "custom" && (
-                            <Input
-                              id="customEngineCapacity"
-                              name="engineCapacity"
-                              value={formData.engineCapacity === "custom" ? "" : formData.engineCapacity}
-                              onChange={handleInputChange}
-                              placeholder="Enter custom engine capacity (e.g., 2.5L)"
-                              className="border-[#9FA791] dark:border-[#4A4D45] focus:border-[#FF6700] dark:focus:border-[#FF7D33] focus:ring-[#FF6700] dark:focus:ring-[#FF7D33] dark:bg-[#1F2B20] dark:text-white"
-                              disabled={isSubmitting}
-                            />
+                            autoComplete="off"
+                          />
+                          {showEngineCapacityDropdown && engineCapacityFiltered.length > 0 && (
+                            <div className="absolute z-10 w-full mt-1 bg-white dark:bg-[#1F2B20] border border-[#9FA791] dark:border-[#4A4D45] rounded-md shadow-lg max-h-60 overflow-y-auto">
+                              {engineCapacityFiltered.map((option) => (
+                                <div
+                                  key={option.value}
+                                  className="px-4 py-2 hover:bg-[#FFF8E0] dark:hover:bg-[#2A352A] cursor-pointer text-[#3E5641] dark:text-white"
+                                  onMouseDown={(e) => { e.preventDefault(); handleEngineCapacitySelect(option); }}
+                                >
+                                  {option.label}
+                                </div>
+                              ))}
+                            </div>
                           )}
                         </div>
                       </div>
 
                       <div className="space-y-1.5">
-                        <Label htmlFor="bodyType" className="text-sm font-medium text-[#3E5641] dark:text-gray-300">
-                          Body Type
-                        </Label>
-                        <select
-                          id="bodyType"
-                          name="bodyType"
-                          value={formData.bodyType}
-                          onChange={handleInputChange}
-                          className="w-full px-3 py-2 rounded-lg border border-[#9FA791] dark:border-[#4A4D45] focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] appearance-none bg-white dark:bg-[#2A352A] text-[#3E5641] dark:text-white"
-                          disabled={isSubmitting}
-                        >
-                          <option value="">Select Body Type</option>
-                          {bodyTypeOptions.map((option) => (
-                            <option key={option.value} value={option.value}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </select>
+                        <div className="relative" ref={bodyTypeRef}>
+                          <Label htmlFor="bodyTypeInput" className="text-sm font-medium text-[#3E5641] dark:text-gray-300">
+                            Body Type
+                          </Label>
+                          <Input
+                            id="bodyTypeInput"
+                            name="bodyType"
+                            type="text"
+                            value={bodyTypeSearch}
+                            onChange={handleBodyTypeSearchChange}
+                            onFocus={() => {
+                                setShowBodyTypeDropdown(true);
+                                setBodyTypeFiltered(
+                                  bodyTypeSearch
+                                    ? bodyTypeOptionsList.filter(option => option.label.toLowerCase().includes(bodyTypeSearch.toLowerCase()))
+                                    : bodyTypeOptionsList
+                                );
+                            }}
+                            placeholder="Type or select body type"
+                            className="border-[#9FA791] dark:border-[#4A4D45] focus:border-[#FF6700] dark:focus:border-[#FF7D33] focus:ring-[#FF6700] dark:focus:ring-[#FF7D33] dark:bg-[#1F2B20] dark:text-white"
+                            disabled={isSubmitting}
+                            autoComplete="off"
+                          />
+                          {showBodyTypeDropdown && bodyTypeFiltered.length > 0 && (
+                            <div className="absolute z-10 w-full mt-1 bg-white dark:bg-[#1F2B20] border border-[#9FA791] dark:border-[#4A4D45] rounded-md shadow-lg max-h-60 overflow-y-auto">
+                              {bodyTypeFiltered.map((option) => (
+                                <div
+                                  key={option.value}
+                                  className="px-4 py-3 hover:bg-[#FFF8E0] dark:hover:bg-[#2A352A] cursor-pointer text-[#3E5641] dark:text-white flex items-center"
+                                  onMouseDown={(e) => { e.preventDefault(); handleBodyTypeSelect(option); }}
+                                >
+                                  <option.IconComponent className="w-4 h-4 mr-2 opacity-70 flex-shrink-0" />
+                                  {option.label}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>

@@ -3,10 +3,11 @@ import { useState, useEffect } from "react"
 import Image from "next/image" // Added for user profile picture
 import Link from "next/link"
 import { Plus, Edit, Eye, Heart, MessageSquare, Car, Package } from "lucide-react"
+import { Trash2 } from "lucide-react" // Import the Trash2 icon
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Header } from "./ui/header"
-import LikedCarsPage from "./liked-cars-page"
+import LikedCarsPage from "@/components/liked-cars-page"
 import VehicleDetails from "./vehicle-details"
 import { vehicles } from "@/lib/data"
 import type { Vehicle } from "@/lib/data"
@@ -21,7 +22,10 @@ interface DashboardProps {
   onViewProfileSettings: () => void // Add callback for viewing profile settings
   onViewUploadVehicle: () => void; // Add callback for viewing vehicle upload page
   onUserUpdate: (updatedData: Partial<UserProfile>) => void; // Add onUserUpdate prop
+  onEditListedCar?: (vehicle: Vehicle) => void; // Add callback for editing a listed car
+  onDeleteListedCar?: (vehicle: Vehicle) => void; // Add callback for deleting a listed car
   listedCars?: Vehicle[]; // Add listed cars prop for the recently listed section
+  onSaveCar?: (vehicle: Vehicle) => void; // Add callback for saving/unsaving cars
   // Add Header navigation props (onSignOut was already present)
   onLoginClick: () => void;
   onGoHome: () => void;
@@ -29,7 +33,7 @@ interface DashboardProps {
   onGoToSellPage: () => void; // This prop seems to be intended for a sell page, will repurpose for upload for now
 }
 
-export default function Dashboard({ user, onSignOut, onBack, savedCars = [], listedCars = [], onViewDetails, onViewProfileSettings, onViewUploadVehicle }: DashboardProps) {
+export default function Dashboard({ user, onSignOut, onBack, savedCars = [], listedCars = [], onViewDetails, onViewProfileSettings, onViewUploadVehicle, onSaveCar, onEditListedCar, onDeleteListedCar }: DashboardProps) {
   const [showLikedCarsPage, setShowLikedCarsPage] = useState(false)
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null)
   const [currentCarIndex, setCurrentCarIndex] = useState(0)
@@ -44,15 +48,6 @@ export default function Dashboard({ user, onSignOut, onBack, savedCars = [], lis
 
     return () => clearInterval(interval)
   }, [savedCars.length])
-
-  // Mock data for user metrics
-  const userMetrics = {
-    listingViews: 243,
-    saves: 18,
-    contacts: 7,
-    totalListings: 3,
-    freeListingsRemaining: 2,
-  }
 
   // Handle viewing vehicle details
   const handleViewDetails = (vehicle: Vehicle) => {
@@ -73,8 +68,26 @@ export default function Dashboard({ user, onSignOut, onBack, savedCars = [], lis
     user.email?.[0] || "U" // Fallback to 'U' if email is somehow empty
   ).toUpperCase();
 
+  // User metrics derived from props or other state
+  const totalListings = listedCars.length;
+  const maxFreeListings = 5; // Assuming 5 is the limit for the free plan
+  const freeListingsRemaining = Math.max(0, maxFreeListings - totalListings);
+  const userMetrics = { // Keep other metrics, or make them dynamic if data is available
+    listingViews: 243, // Placeholder, replace with actual data if available
+    saves: 18, // Placeholder
+    contacts: 7, // Placeholder
+  };
+
   if (selectedVehicle) {
-    return <VehicleDetails vehicle={selectedVehicle} onBack={() => setSelectedVehicle(null)} user={user} />
+    return (
+      <VehicleDetails
+        vehicle={selectedVehicle}
+        onBack={() => setSelectedVehicle(null)}
+        user={user}
+        savedCars={savedCars} // Pass the current list of saved cars
+        onSaveCar={onSaveCar} // Pass the handler to update saved cars
+      />
+    );
   }
 
   if (showLikedCarsPage) {
@@ -150,13 +163,13 @@ export default function Dashboard({ user, onSignOut, onBack, savedCars = [], lis
                         <Eye className="w-5 h-5 text-[#FF6700]" />
                       </div>
                     </div>
-                    <div className="mb-4 flex items-end gap-2">
+                    <div className="mb-4 flex items-end gap-2 filter blur-sm"> {/* Added blur */}
                       <div className="text-3xl font-bold text-[#3E5641]">{userMetrics.totalListings}</div>
-                      <div className="text-lg font-medium text-[#6F7F69] pb-0.5">Active Listings</div>
+                      <div className="text-lg font-medium text-[#6F7F69] pb-0.5">Total Views</div> {/* Changed to reflect the metric shown */}
                     </div>
                   </div>
 
-                  <div className="space-y-4">
+                  <div className="space-y-4 filter blur-sm"> {/* Added blur */}
                     <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
                       <div className="flex justify-between items-center mb-2">
                         <div className="flex items-center gap-2">
@@ -233,16 +246,16 @@ export default function Dashboard({ user, onSignOut, onBack, savedCars = [], lis
                       </div>
                       <div className="flex items-center justify-between text-sm">
                         <span>Vehicle Listings</span>
-                        <span className="font-medium">{userMetrics.totalListings}/5 Used</span>
+                        <span className="font-medium">{totalListings}/{maxFreeListings} Used</span>
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
                         <div
                           className="bg-[#FF6700] h-2 rounded-full"
-                          style={{ width: `${(userMetrics.totalListings / 5) * 100}%` }}
+                          style={{ width: `${(totalListings / maxFreeListings) * 100}%` }}
                         ></div>
                       </div>
                       <p className="text-xs text-gray-500 mt-2">
-                        {userMetrics.freeListingsRemaining} free listings remaining
+                        {freeListingsRemaining} free listings remaining
                       </p>
                     </div>
 
@@ -380,10 +393,30 @@ export default function Dashboard({ user, onSignOut, onBack, savedCars = [], lis
                           </div>
                           <div className="text-sm text-gray-500">{vehicle.price}</div>
                         </div>
-                        {/* Edit button - currently does nothing, could be hooked up later */}
-                        <Button variant="ghost" size="icon" className="flex-shrink-0">
-                          <Edit className="h-4 w-4" />
-                        </Button>
+                        <div className="flex items-center ml-2"> {/* Group buttons */}
+                          {/* Edit button */}
+                          {onEditListedCar && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="flex-shrink-0"
+                              onClick={(e) => { e.stopPropagation(); onEditListedCar(vehicle); }}
+                            >
+                              <Edit className="h-4 w-4 text-blue-500" />
+                            </Button>
+                          )}
+                          {/* Delete button */}
+                          {onDeleteListedCar && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="flex-shrink-0"
+                              onClick={(e) => { e.stopPropagation(); onDeleteListedCar(vehicle); }}
+                            >
+                              <Trash2 className="h-4 w-4 text-red-500" />
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     ))
                   ) : (
