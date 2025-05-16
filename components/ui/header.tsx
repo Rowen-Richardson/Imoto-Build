@@ -1,4 +1,3 @@
-// c:\Users\richa\OneDrive\Desktop\imotov1\imotov1\components\ui\header.tsx
 "use client"
 
 import { useState, useEffect } from "react"
@@ -81,14 +80,14 @@ export function Header({
         <button onClick={onShowAllCars} className="hover:text-[#FF6700] transition-colors text-sm font-medium">
           {user ? "Buy My Dream" : "Buy a Car"}
         </button>
-        <button onClick={onGoToSellPage} className="hover:text-[#FF6700] transition-colors text-sm font-medium">
+         <button onClick={onGoToSellPage} className="hover:text-[#FF6700] transition-colors text-sm font-medium">
           {user ? "Upload Vehicle" : "Sell a Car"}
         </button>
         {/* Keep Links for actual page navigation if needed */}
-        <Link href="/services" className="hover:text-[#FF6700] transition-colors text-sm font-medium">
+        <Link href="/Services" className="hover:text-[#FF6700] transition-colors text-sm font-medium">
           Services
         </Link>
-        <Link href="/about" className="hover:text-[#FF6700] transition-colors text-sm font-medium">
+        <Link href="/About" className="hover:text-[#FF6700] transition-colors text-sm font-medium">
           About
         </Link>
         {/* Moved Search icon here */}
@@ -178,14 +177,14 @@ export function Header({
             {user ? "Upload Vehicle" : "Sell a Car"}
           </button>
           <Link
-            href="/services"
+            href="/Services"
             onClick={() => setMobileMenuOpen(false)}
             className="text-white hover:text-[#FF6700] transition-colors text-lg font-medium"
           >
             Services
           </Link>
           <Link
-            href="/about"
+            href="/About"
             onClick={() => setMobileMenuOpen(false)}
             className="text-white hover:text-[#FF6700] transition-colors text-lg font-medium"
           >
