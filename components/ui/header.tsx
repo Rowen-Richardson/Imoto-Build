@@ -90,10 +90,6 @@ export function Header({
         <Link href="/About" className="hover:text-[#FF6700] transition-colors text-sm font-medium">
           About
         </Link>
-        {/* Moved Search icon here */}
-        <button className="p-2 rounded-full hover:text-[#FF6700] transition-colors" aria-label="Search">
-          <Search className="h-5 w-5" />
-        </button>
       </nav>
 
       {/* Right Side Actions */}
@@ -190,9 +186,6 @@ export function Header({
           >
             About
           </Link>
-          <button className="p-2 rounded-full text-white hover:text-[#FF6700] transition-colors" aria-label="Search">
-            <Search className="h-5 w-5" />
-          </button>
           {user ? (
             <>
               <button
