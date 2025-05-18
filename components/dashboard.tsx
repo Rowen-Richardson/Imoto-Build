@@ -104,7 +104,16 @@ export default function Dashboard({ user, onSignOut, onBack, savedCars = [], lis
   return (
     <div className="h-screen bg-white flex flex-col">
       {/* Top Header Section */}
-      <Header user={user} onDashboardClick={onBack} />
+      <Header
+        user={user}
+        onLoginClick={() => { /* Optionally handle login click in dashboard */ }}
+        onDashboardClick={onBack}
+        onGoHome={() => { /* Optionally handle go home in dashboard */ }}
+        onShowAllCars={() => { /* Optionally handle show all cars in dashboard */ }}
+        onGoToSellPage={onViewUploadVehicle}
+        onSignOut={onSignOut}
+        transparent={false}
+      />
 
       {/* Main Content Area: Fills remaining space */}
       <main className="flex-1 px-6 pb-6 overflow-auto pt-20">
