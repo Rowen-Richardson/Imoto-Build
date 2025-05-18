@@ -42,6 +42,9 @@ export default function CarMarketplace() {
   const [showBodyTypes, setShowBodyTypes] = useState(false) // State for body type dropdown visibility
   const searchRef = useRef<HTMLDivElement>(null)
 
+  // Track if login was triggered by "Sell a Car"/Upload Vehicle
+  const [loginContext, setLoginContext] = useState<'sell' | 'default'>("default");
+
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
@@ -270,10 +273,19 @@ export default function CarMarketplace() {
 
   // Handler to navigate to Upload Vehicle page
   const handleViewUploadVehicle = () => {
+    if (!user) {
+      setLoginContext('sell');
+      setShowLogin(true);
+      setShowUploadVehicle(false);
+      setShowDashboard(false);
+      setShowProfileSettings(false);
+      setIsSearchPage(false);
+    } else {
       setShowUploadVehicle(true);
-      setShowDashboard(false); // Hide dashboard
-      setShowProfileSettings(false); // Hide profile settings
-      setIsSearchPage(false); // Ensure search page is not visible
+      setShowDashboard(false);
+      setShowProfileSettings(false);
+      setIsSearchPage(false);
+    }
   };
 
   // Handler to navigate back from Upload Vehicle page to Dashboard
@@ -518,12 +530,23 @@ export default function CarMarketplace() {
     // Pass the updated handleLoginSuccess and Header navigation props
     return (
       <LoginPage
-        onLoginSuccess={handleLoginSuccess}
+        onLoginSuccess={(userData) => {
+          setUser(userData);
+          setShowLogin(false);
+          if (loginContext === 'sell') {
+            setShowUploadVehicle(true);
+            setShowDashboard(false);
+            setShowProfileSettings(false);
+            setIsSearchPage(false);
+            setLoginContext('default');
+          }
+        }}
         onCancel={() => setShowLogin(false)}
+        loginContext={loginContext}
         onDashboardClick={() => user ? setShowDashboard(true) : setShowLogin(true)} // Keep existing logic
         onGoHome={() => setIsSearchPage(true)} // Go back to main search page
         onShowAllCars={() => { setFilteredVehicles(allVehicles); setIsSearchPage(false); }} // Use allVehicles here
-        onGoToSellPage={() => alert("Sell page not implemented")} // Placeholder
+        onGoToSellPage={handleViewUploadVehicle}
         onSignOut={handleSignOut} // Pass sign out handler
       />
     );
@@ -592,7 +615,7 @@ export default function CarMarketplace() {
         onDashboardClick={() => user ? setShowDashboard(true) : setShowLogin(true)} // Show dashboard if logged in, else login
         onGoHome={() => setIsSearchPage(true)} // Go back to main search page
         onShowAllCars={() => { setFilteredVehicles(allVehicles); setIsSearchPage(false); }} // Use allVehicles here
-        onGoToSellPage={() => alert("Sell page not implemented")} // Placeholder
+        onGoToSellPage={handleViewUploadVehicle}
         onSignOut={handleSignOut} // Pass sign out handler
         transparent={isSearchPage} // Header is transparent only on the initial search page
       />
