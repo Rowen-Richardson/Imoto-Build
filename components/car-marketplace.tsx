@@ -273,6 +273,7 @@ export default function CarMarketplace() {
 
   // Handler to navigate to Upload Vehicle page
   const handleViewUploadVehicle = () => {
+    setSelectedVehicle(null); // Always clear selectedVehicle first
     if (!user) {
       setLoginContext('sell');
       setShowLogin(true);
@@ -445,11 +446,11 @@ export default function CarMarketplace() {
         {/* Pass user state to Header */}
         <Header
           user={user}
-          onLoginClick={() => setShowLogin(true)}
+          onLoginClick={() => { setSelectedVehicle(null); setShowLogin(true); }}
           onDashboardClick={() => user ? setShowDashboard(true) : setShowLogin(true)}
-          onGoHome={() => setIsSearchPage(true)}
-          onShowAllCars={() => { setFilteredVehicles(allVehicles); setIsSearchPage(false); }} // Use allVehicles here
-          onGoToSellPage={() => alert("Sell page not implemented")}
+          onGoHome={() => { setIsSearchPage(true); setSelectedVehicle(null); }}
+          onShowAllCars={() => { setFilteredVehicles(allVehicles); setIsSearchPage(false); setSelectedVehicle(null); }}
+          onGoToSellPage={() => { setSelectedVehicle(null); handleViewUploadVehicle(); }}
           onSignOut={handleSignOut}
         />
         <div className="pt-16 md:pt-20">
@@ -478,11 +479,18 @@ export default function CarMarketplace() {
         {/* Pass user state to Header */}
         <Header
           user={user}
-          onLoginClick={() => setShowLogin(true)}
-          onDashboardClick={() => user ? setShowDashboard(true) : setShowLogin(true)}
-          onGoHome={() => setIsSearchPage(true)}
-          onShowAllCars={() => { setFilteredVehicles(allVehicles); setIsSearchPage(false); }} // Use allVehicles here
-          onGoToSellPage={() => alert("Sell page not implemented")}
+          onLoginClick={() => { setSelectedVehicle(null); setShowLogin(true); }}
+          onDashboardClick={() => { setSelectedVehicle(null); user ? setShowDashboard(true) : setShowLogin(true); }}
+          onGoHome={() => {
+            setIsSearchPage(true);
+            setSelectedVehicle(null); // Clear selected vehicle
+          }}
+          onShowAllCars={() => {
+            setFilteredVehicles(allVehicles);
+            setIsSearchPage(false);
+            setSelectedVehicle(null); // Clear selected vehicle
+          }}
+          onGoToSellPage={() => { setSelectedVehicle(null); handleViewUploadVehicle(); }}
           onSignOut={handleSignOut}
         />
         <div className="pt-16 md:pt-20">
@@ -505,10 +513,19 @@ export default function CarMarketplace() {
         <Header
           user={user}
           onLoginClick={() => setShowLogin(true)}
-          onDashboardClick={() => user ? setShowDashboard(true) : setShowLogin(true)}
-          onGoHome={() => { setVehicleToEdit(null); setIsSearchPage(true); }}
-          onShowAllCars={() => { setVehicleToEdit(null); setFilteredVehicles(allVehicles); setIsSearchPage(false); }}
-          onGoToSellPage={() => alert("Sell page not implemented")}
+          onDashboardClick={() => { setVehicleToEdit(null); setSelectedVehicle(null); user ? setShowDashboard(true) : setShowLogin(true); }}
+          onGoHome={() => {
+            setVehicleToEdit(null);
+            setIsSearchPage(true);
+            setSelectedVehicle(null); // Clear selected vehicle
+          }}
+          onShowAllCars={() => {
+            setVehicleToEdit(null);
+            setFilteredVehicles(allVehicles);
+            setIsSearchPage(false);
+            setSelectedVehicle(null); // Clear selected vehicle
+          }}
+          onGoToSellPage={() => { setVehicleToEdit(null); setSelectedVehicle(null); handleViewUploadVehicle(); }}
           onSignOut={handleSignOut}
         />
         <div className="pt-16 md:pt-20">
