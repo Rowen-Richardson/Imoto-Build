@@ -2,8 +2,8 @@
 
 import type React from "react"
 import Image from "next/image"
-import { useState, useRef, useEffect } from "react"
-import { useRouter } from 'next/router';
+import { useState, useRef, useEffect, useMemo } from "react"
+import { useRouter } from 'next/navigation'; // Changed from next/router to next/navigation
 import { ArrowLeft, Camera, Mail, Phone, MapPin, Save, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -30,12 +30,16 @@ export default function ProfileSettings({ user, onBack, onSave, onSignOut }: Pro
     else router.push('/login');
   };
   const handleGoHome = () => { router.push('/'); };
-  const handleShowAllCars = () => { router.push('/'); };
+  const handleShowAllCars = () => {
+    // This should ideally navigate to the main listing/search page, which is '/'
+    // If the main page handles showing all cars by default, '/' is correct.
+    router.push('/');
+  };
   const handleGoToSell = () => {
     if (!user) {
       router.push({ pathname: '/login', query: { next: '/upload-vehicle' } });
     } else {
-      router.push('/upload-vehicle');
+      router.push('/upload-vehicle'); // Navigate to the upload page if logged in
     }
   };
   const handleSignOutClick = () => {
@@ -119,35 +123,6 @@ export default function ProfileSettings({ user, onBack, onSave, onSignOut }: Pro
     fileInputRef.current?.click()
   }
 
-  const handleSignOut = () => {
-    console.log("Attempting sign out...");
-    // Call the onSignOut prop provided by the parent
-    onSignOut();
-    // The parent component (CarMarketplace) will handle redirection/state updates
-  };
-
-  const savePersonalInfo = async () => {
-    setIsSavingPersonal(true)
-    setPersonalError(null)
-    try {
-      const updatedProfile: Partial<UserProfile> = { ...formData }
-      // Only include profilePic if it has changed
-      if (profileImage !== user.profilePic) {
-        updatedProfile.profilePic = profileImage // Send the new base64 data or undefined
-        // Note: Backend needs to handle receiving base64 and converting/storing it appropriately (e.g., upload to S3, save URL)
-      }
-
-      await onSave(updatedProfile) // Call the onSave prop passed from Dashboard
-      // Optionally show a success message
-      onBack(); // Navigate back to the dashboard after successful save
-    } catch (error) {
-      console.error("Failed to save personal info:", error)
-      setPersonalError(error instanceof Error ? error.message : "Failed to save personal info.")
-    } finally {
-      setIsSavingPersonal(false)
-    }
-  }
-
   const saveSecurityChanges = async () => {
     setIsSavingSecurity(true)
     setSecurityError(null)
@@ -203,11 +178,14 @@ export default function ProfileSettings({ user, onBack, onSave, onSignOut }: Pro
     }
   }
 
-  // Ensure that changes in ProfileSettings are propagated to UploadVehicle via the onSave callback.
+  // Handler to save personal info
   const handleSavePersonalInfo = async () => {
     try {
       setIsSavingPersonal(true)
       setPersonalError(null)
+
+      const updatedProfile: Partial<UserProfile> = { ...formData };
+      // TODO: Handle profile image upload and update here if profileImage state is different from user.profilePic
 
       // Call the onSave callback with updated profile data
       await onSave(formData)
@@ -222,12 +200,17 @@ export default function ProfileSettings({ user, onBack, onSave, onSignOut }: Pro
     }
   }
 
+  // Handler for the Sign Out button click
+  const handleSignOutButton = () => {
+    console.log("Attempting sign out...");
+    onSignOut(); // Call the parent handler
+    // The parent component (CarMarketplace) should handle the actual sign-out logic
+    // and potentially the navigation away from the dashboard/settings page.
+    // We don't necessarily need a router.push('/login') here if the parent handles it.
+    // If the parent *doesn't* handle navigation, you might add router.push('/login');
+  };
+
   // --- Helpers ---
-  const getInitials = () => {
-    return (
-      (formData.firstName?.[0] || "") + (formData.lastName?.[0] || "") || formData.email?.[0] || ""
-    ).toUpperCase()
-  }
 
   // --- Render ---
   return (
@@ -239,7 +222,7 @@ export default function ProfileSettings({ user, onBack, onSave, onSignOut }: Pro
         onGoHome={handleGoHome}
         onShowAllCars={handleShowAllCars}
         onGoToSellPage={handleGoToSell}
-        onSignOut={handleSignOutClick}
+        onSignOut={handleSignOutClick} // Use the handler that calls parent prop
         transparent={false}
       />
       <main className="flex-1 px-4 sm:px-6 pb-6 overflow-auto pt-20 md:pt-24"> {/* Adjusted padding */}
@@ -271,7 +254,9 @@ export default function ProfileSettings({ user, onBack, onSave, onSignOut }: Pro
                   ) : (
                     <span className="text-5xl font-bold text-gray-500 dark:text-gray-400 select-none">
                       {getInitials()}
+
                     </span>
+
                   )}
                   <Button
                     variant="secondary"
@@ -324,7 +309,7 @@ export default function ProfileSettings({ user, onBack, onSave, onSignOut }: Pro
                   <div className="mt-6 text-center"> {/* Added margin top for spacing */}
                     <Button
                       variant="destructive" // Use destructive variant for sign out
-                      onClick={handleSignOut}
+                      onClick={handleSignOutButton} // Use the dedicated sign out button handler
                       className="w-full" // Make button full width
                     >
                       Sign Out
@@ -452,7 +437,7 @@ export default function ProfileSettings({ user, onBack, onSave, onSignOut }: Pro
                     <div className="flex justify-end pt-4 mt-auto"> {/* Added mt-auto */}
                       <Button
                         onClick={savePersonalInfo}
-                        disabled={isSavingPersonal}
+                        disabled={isSavingPersonal} // Use the correct saving state
                         className="bg-[#FF6700] text-white hover:bg-[#FF6700]/90 dark:bg-[#FF7D33] dark:hover:bg-[#FF7D33]/90"
                       >
                         <Save className="h-4 w-4 mr-2" />
@@ -563,3 +548,10 @@ export default function ProfileSettings({ user, onBack, onSave, onSignOut }: Pro
     </div>
   )
 }
+
+// Helper function to get initials (moved outside the component)
+const getInitials = (user: UserProfile | null, formData: Partial<UserProfile>) => {
+  return (
+    (formData.firstName?.[0] || "") + (formData.lastName?.[0] || "") || user?.email?.[0] || ""
+  ).toUpperCase();
+};

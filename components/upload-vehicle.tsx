@@ -1,6 +1,7 @@
 "use client"
 
 import type React from "react"
+import { useRouter } from 'next/navigation'; // Changed from next/router to next/navigation
 import Image from "next/image"
 import { useState, useRef, useEffect, ElementType } from "react"
 import { ArrowLeft, Camera, Save, AlertCircle, XCircle, Edit, Check, Grip, Car, Truck, Bike } from "lucide-react" // Added Car, Truck, Bike
@@ -9,6 +10,7 @@ import { Card, CardContent } from "@/components/ui/card" // CardContent might no
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Header } from "@/components/ui/header"; // Import Header
 import type { UserProfile } from "@/types/user"
 
 interface UploadVehicleProps {
@@ -16,6 +18,7 @@ interface UploadVehicleProps {
   onBack: () => void // Callback to go back
   onVehicleSubmit: (vehicleData: any) => Promise<void> // Callback to submit vehicle data
   onSaveProfile?: (updatedProfile: Partial<UserProfile>) => Promise<void> // Callback to save profile changes
+  onSignOut?: () => void; // Add onSignOut for Header
 }
 
 // Generate more granular engine capacity options
@@ -52,6 +55,29 @@ const bodyTypeOptionsList: { value: string; label: string; IconComponent: Elemen
 ];
 
 export default function UploadVehicle({ user, onBack, onVehicleSubmit, onSaveProfile }: UploadVehicleProps) {
+  const router = useRouter();
+
+  // Navigation handlers for Header
+  const handleLogin = () => { router.push('/login'); };
+  const handleDashboard = () => {
+    if (user) router.push('/dashboard');
+    else router.push('/login');
+  };
+  const handleGoHome = () => { router.push('/'); };
+  const handleShowAllCars = () => { router.push('/'); };
+  const handleGoToSell = () => {
+    // Already on the sell/upload page, so this might redirect home or do nothing
+    // For now, let's assume it means "go to my listings" or dashboard if already on upload
+    if (user) router.push('/dashboard'); // Or a specific "my listings" page
+    else router.push({ pathname: '/login', query: { next: '/upload-vehicle' } } as any);
+  };
+  const handleSignOutClick = () => {
+    if (onSignOut) {
+      onSignOut(); // Call parent handler if provided (e.g., for global state cleanup)
+    }
+    router.push('/login');
+  };
+
   // --- State ---
   const [vehicleImages, setVehicleImages] = useState<string[]>([])
   const [isDragging, setIsDragging] = useState<boolean>(false)

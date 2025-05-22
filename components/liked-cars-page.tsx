@@ -1,14 +1,22 @@
 "use client"
 
-
 import { useState } from "react"
-import { useRouter } from 'next/router';
+import { useRouter } from 'next/navigation'; // Changed from next/router to next/navigation
 import { Heart, Search, ArrowLeft } from "lucide-react"
 import type { Vehicle } from "@/lib/data"
 import { Header } from "./ui/header"
+import type { UserProfile } from "@/types/user"; // Import UserProfile
 
+// Define the props for the LikedCarsPage component
+interface LikedCarsPageProps {
+  likedVehicles: Vehicle[];
+  onBack: () => void;
+  onViewDetails: (vehicle: Vehicle) => void;
+  user: UserProfile | null; // User can be a UserProfile object or null
+  onSignOut?: () => void; // Add onSignOut for Header consistency
+}
 
-export default function LikedCarsPage({ likedVehicles, onBack, onViewDetails, user }: LikedCarsPageProps) {
+export default function LikedCarsPage({ likedVehicles, onBack, onViewDetails, user, onSignOut }: LikedCarsPageProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const router = useRouter();
 
@@ -26,13 +34,17 @@ export default function LikedCarsPage({ likedVehicles, onBack, onViewDetails, us
   const handleShowAllCars = () => { router.push('/'); };
   const handleGoToSell = () => {
     if (!user) {
-      router.push({ pathname: '/login', query: { next: '/upload-vehicle' } });
+      // Redirect to login with intent to come back to upload
+      router.push({ pathname: '/login', query: { next: '/upload-vehicle' } } as any);
     } else {
       router.push('/upload-vehicle');
     }
   };
-  const handleSignOut = () => {
-    router.push('/login');
+  const handleSignOutClick = () => { // Renamed to avoid conflict
+    if (onSignOut) {
+      onSignOut(); // Call parent handler if provided
+    }
+    router.push('/login'); // Then redirect
   };
 
   return (
@@ -44,7 +56,7 @@ export default function LikedCarsPage({ likedVehicles, onBack, onViewDetails, us
         onGoHome={handleGoHome}
         onShowAllCars={handleShowAllCars}
         onGoToSellPage={handleGoToSell}
-        onSignOut={handleSignOut}
+        onSignOut={handleSignOutClick} // Use the new handler
         transparent={false}
       />
 

@@ -30,7 +30,7 @@ interface DashboardProps {
   onLoginClick: () => void;
   onGoHome: () => void;
   onShowAllCars: () => void;
-  onGoToSellPage: () => void; // This prop seems to be intended for a sell page, will repurpose for upload for now
+  onGoToSellPage: () => void; 
 }
 
 export default function Dashboard({ user, onSignOut, onBack, savedCars = [], listedCars = [], onViewDetails, onViewProfileSettings, onViewUploadVehicle, onSaveCar, onEditListedCar, onDeleteListedCar }: DashboardProps) {
@@ -97,6 +97,8 @@ export default function Dashboard({ user, onSignOut, onBack, savedCars = [], lis
         onBack={() => setShowLikedCarsPage(false)}
         onViewDetails={handleViewDetails}
         user={user}
+        onSignOut={onSignOut} // Pass down onSignOut from DashboardProps
+        // For onGoToSellPage, LikedCarsPage defines its own router-based handler.
       />
     )
   }

@@ -462,10 +462,10 @@ export default function CarMarketplace() {
             user={user}
             // Pass Header navigation props
             onLoginClick={() => setShowLogin(true)}
-            onDashboardClick={() => user ? setShowDashboard(true) : setShowLogin(true)}
+            onDashboardClick={() => { setSelectedProvince(null); user ? setShowDashboard(true) : setShowLogin(true); }}
             onGoHome={() => setIsSearchPage(true)}
             onShowAllCars={() => { setFilteredVehicles(allVehicles); setIsSearchPage(false); }} // Use allVehicles here
-            onGoToSellPage={() => alert("Sell page not implemented")}
+            onGoToSellPage={handleViewUploadVehicle} // Pass the central handler
             onSignOut={handleSignOut}
           />
         </div>
@@ -563,7 +563,7 @@ export default function CarMarketplace() {
         onDashboardClick={() => user ? setShowDashboard(true) : setShowLogin(true)} // Keep existing logic
         onGoHome={() => setIsSearchPage(true)} // Go back to main search page
         onShowAllCars={() => { setFilteredVehicles(allVehicles); setIsSearchPage(false); }} // Use allVehicles here
-        onGoToSellPage={handleViewUploadVehicle}
+        onGoToSellPage={handleViewUploadVehicle} // Pass the central handler
         onSignOut={handleSignOut} // Pass sign out handler
       />
     );
@@ -588,6 +588,7 @@ export default function CarMarketplace() {
               onBack={handleBackFromUploadVehicle} // Pass handler to go back to dashboard
               onVehicleSubmit={handleVehicleSubmit} // Pass the submit handler
               onSaveProfile={handleSaveProfileSettings} // Pass handler to save profile changes
+              onSignOut={handleSignOut} // Pass the main sign-out handler
           />
       );
   }
@@ -618,7 +619,7 @@ export default function CarMarketplace() {
         onLoginClick={() => setShowLogin(true)} // Show login page
         onGoHome={() => setIsSearchPage(true)} // Go back to main search page
         onShowAllCars={() => { setFilteredVehicles(allVehicles); setIsSearchPage(false); }} // Use allVehicles here
-        onGoToSellPage={() => alert("Sell page not implemented")} // Placeholder
+        onGoToSellPage={handleViewUploadVehicle} // Pass the central handler
       />
     )
   }
