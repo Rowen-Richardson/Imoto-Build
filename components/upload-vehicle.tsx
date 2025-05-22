@@ -481,7 +481,16 @@ export default function UploadVehicle({ user, onBack, onVehicleSubmit, onSavePro
   // --- Render ---
   return (
     <div className="min-h-screen bg-[var(--light-bg)] dark:bg-[var(--dark-bg)] flex flex-col">
-      {/* Header is rendered by the parent (CarMarketplace) */}
+      <Header
+        user={user}
+        onLoginClick={handleLogin}
+        onDashboardClick={handleDashboard}
+        onGoHome={handleGoHome}
+        onShowAllCars={handleShowAllCars}
+        onGoToSellPage={handleGoToSell}
+        onSignOut={handleSignOutClick}
+        transparent={false}
+      />
       <main className="flex-1 px-4 sm:px-6 pb-6 overflow-auto pt-20 md:pt-24">
         <Button variant="ghost" onClick={onBack} className="mb-4 -ml-2 text-[#FF6700] dark:text-[#FF7D33]">
           <ArrowLeft className="h-5 w-5 mr-2" />

@@ -1,27 +1,52 @@
 "use client"
 
+
 import { useState } from "react"
+import { useRouter } from 'next/router';
 import { Heart, Search, ArrowLeft } from "lucide-react"
 import type { Vehicle } from "@/lib/data"
 import { Header } from "./ui/header"
 
-interface LikedCarsPageProps {
-  likedVehicles: Vehicle[]
-  onBack: () => void
-  onViewDetails: (vehicle: Vehicle) => void
-  user: any
-}
 
 export default function LikedCarsPage({ likedVehicles, onBack, onViewDetails, user }: LikedCarsPageProps) {
-  const [searchTerm, setSearchTerm] = useState("")
+  const [searchTerm, setSearchTerm] = useState("");
+  const router = useRouter();
 
   const filteredVehicles = likedVehicles.filter((vehicle) =>
     `${vehicle.make} ${vehicle.model} ${vehicle.variant}`.toLowerCase().includes(searchTerm.toLowerCase()),
-  )
+  );
+
+  // Navigation handlers
+  const handleLogin = () => { router.push('/login'); };
+  const handleDashboard = () => {
+    if (user) router.push('/dashboard');
+    else router.push('/login');
+  };
+  const handleGoHome = () => { router.push('/'); };
+  const handleShowAllCars = () => { router.push('/'); };
+  const handleGoToSell = () => {
+    if (!user) {
+      router.push({ pathname: '/login', query: { next: '/upload-vehicle' } });
+    } else {
+      router.push('/upload-vehicle');
+    }
+  };
+  const handleSignOut = () => {
+    router.push('/login');
+  };
 
   return (
     <div className="min-h-screen">
-      <Header user={user} transparent={false} />
+      <Header
+        user={user}
+        onLoginClick={handleLogin}
+        onDashboardClick={handleDashboard}
+        onGoHome={handleGoHome}
+        onShowAllCars={handleShowAllCars}
+        onGoToSellPage={handleGoToSell}
+        onSignOut={handleSignOut}
+        transparent={false}
+      />
 
       <div className="pt-20 pb-10">
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -105,5 +130,5 @@ export default function LikedCarsPage({ likedVehicles, onBack, onViewDetails, us
         </main>
       </div>
     </div>
-  )
+  );
 }

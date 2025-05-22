@@ -3,6 +3,7 @@
 import type React from "react"
 import Image from "next/image"
 import { useState, useRef, useEffect } from "react"
+import { useRouter } from 'next/router';
 import { ArrowLeft, Camera, Mail, Phone, MapPin, Save, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -10,6 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label" // Import Label
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription } from "@/components/ui/alert" // Import Alert components
+import { Header } from "@/components/ui/header"
 import type { UserProfile } from "@/types/user"; // Import UserProfile from shared types
 
 interface ProfileSettingsProps {
@@ -20,7 +22,26 @@ interface ProfileSettingsProps {
 }
 
 export default function ProfileSettings({ user, onBack, onSave, onSignOut }: ProfileSettingsProps) {
-  // --- State ---
+  const router = useRouter();
+  // Navigation handlers for Header
+  const handleLogin = () => { router.push('/login'); };
+  const handleDashboard = () => {
+    if (user) router.push('/dashboard');
+    else router.push('/login');
+  };
+  const handleGoHome = () => { router.push('/'); };
+  const handleShowAllCars = () => { router.push('/'); };
+  const handleGoToSell = () => {
+    if (!user) {
+      router.push({ pathname: '/login', query: { next: '/upload-vehicle' } });
+    } else {
+      router.push('/upload-vehicle');
+    }
+  };
+  const handleSignOutClick = () => {
+    onSignOut();
+    router.push('/login');
+  };
   const [profileImage, setProfileImage] = useState<string | undefined>(user.profilePic)
   const [formData, setFormData] = useState<Partial<UserProfile>>({
     firstName: user.firstName,
@@ -210,9 +231,17 @@ export default function ProfileSettings({ user, onBack, onSave, onSignOut }: Pro
 
   // --- Render ---
   return (
-    // Added min-h-screen and flex structure to ensure content fills height
     <div className="min-h-screen bg-[var(--light-bg)] dark:bg-[var(--dark-bg)] flex flex-col">
-      {/* Header is rendered by the parent (Dashboard) */}
+      <Header
+        user={user}
+        onLoginClick={handleLogin}
+        onDashboardClick={handleDashboard}
+        onGoHome={handleGoHome}
+        onShowAllCars={handleShowAllCars}
+        onGoToSellPage={handleGoToSell}
+        onSignOut={handleSignOutClick}
+        transparent={false}
+      />
       <main className="flex-1 px-4 sm:px-6 pb-6 overflow-auto pt-20 md:pt-24"> {/* Adjusted padding */}
         <Button variant="ghost" onClick={onBack} className="mb-4 -ml-2 text-[#FF6700] dark:text-[#FF7D33]"> {/* Adjusted styling */}
           <ArrowLeft className="h-5 w-5 mr-2" />

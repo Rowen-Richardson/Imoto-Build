@@ -1,11 +1,41 @@
+
+"use client"
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Header } from "@/components/ui/header"
+import { useRouter } from "next/navigation"
+import { useState } from "react"
 
 export default function AboutPage() {
+  // Simulate user state (replace with real user state if available)
+  const [user, setUser] = useState(null)
+  const router = useRouter()
+
+  // Navigation handlers
+  const handleLogin = () => router.push("/login")
+  const handleDashboard = () => user ? router.push("/dashboard") : router.push("/login")
+  const handleGoHome = () => router.push("/")
+  const handleShowAllCars = () => router.push("/")
+  const handleGoToSell = () => {
+    if (!user) router.push({ pathname: "/login", query: { next: "/upload-vehicle" } })
+    else router.push("/upload-vehicle")
+  }
+  const handleSignOut = () => router.push("/login")
+
   return (
-    <div className="min-h-screen bg-[var(--light-bg)] dark:bg-[var(--dark-bg)] pt-24 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-4xl mx-auto">
+    <div className="min-h-screen bg-[var(--light-bg)] dark:bg-[var(--dark-bg)]">
+      <Header
+        user={user}
+        onLoginClick={handleLogin}
+        onDashboardClick={handleDashboard}
+        onGoHome={handleGoHome}
+        onShowAllCars={handleShowAllCars}
+        onGoToSellPage={handleGoToSell}
+        onSignOut={handleSignOut}
+        transparent={false}
+      />
+      <div className="max-w-4xl mx-auto pt-24 px-4 sm:px-6 lg:px-8">
         <Link href="/" className="inline-flex items-center text-[#FF6700] dark:text-[#FF7D33] hover:underline mb-6">
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Home
