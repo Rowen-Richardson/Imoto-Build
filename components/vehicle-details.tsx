@@ -158,7 +158,7 @@ export default function VehicleDetails({
 
   const handleContactClick = () => {
     if (isMobile) {
-      window.location.href = `tel:${vehicle.sellerPhone.replace(/\s+/g, "")}`
+      window.location.href = `tel: ${vehicle.sellerPhone.replace(/\s+/g, "")}`
     } else {
       setShowContactForm(true)
     }
@@ -796,7 +796,7 @@ export default function VehicleDetails({
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       className="w-full px-3 py-2 bg-[#576B55] dark:bg-[#2A352A] text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FF6700] dark:focus:ring-[#FF7D33]"
-                      placeholder="your@email.com"
+                      placeholder=" your@email.com"
                       required
                     />
                   </div>
@@ -833,15 +833,15 @@ export default function VehicleDetails({
                 isEditMode ? (
                   <div className="space-y-3">
                     <EditableField label="Seller Name" name="sellerName" value={editableData.sellerName} onChange={handleInputChange} textWhite={true} />
-                    <EditableField label="Seller Phone" name="sellerPhone" value={editableData.sellerPhone} onChange={handleInputChange} textWhite={true} />
-                    <EditableField label="Seller Email" name="sellerEmail" type="email" value={editableData.sellerEmail} onChange={handleInputChange} textWhite={true} />
+                    <EditableField label="Seller Phone" name=" sellerPhone" value={editableData.sellerPhone} onChange={handleInputChange} textWhite={true} />
+                    <EditableField label="Seller Email" name=" sellerEmail" type="email" value={editableData.sellerEmail} onChange={handleInputChange} textWhite={true} />
                     <EditableField label="Seller Address" name="sellerAddress" value={editableData.sellerAddress} onChange={handleInputChange} textWhite={true} isTextarea={true} />
                   </div>
                 ) : (
                   <div className="space-y-5 text-white">
                     <div><p className="contact-label">Seller</p><p>{vehicle.sellerName}</p></div>
-                    <div><p className="contact-label">Phone</p><div className="flex items-center"><Phone className="contact-icon" /><p>{vehicle.sellerPhone}</p></div></div>
-                    <div><p className="contact-label">Email</p><div className="flex items-center"><Mail className="contact-icon" /><p>{vehicle.sellerEmail}</p></div></div>
+                    <div><p className="contact-label">Phone</p><div className="flex items-center"><Phone className="contact-icon" /><p> {vehicle.sellerPhone}</p></div></div>
+                    <div><p className="contact-label">Email</p><div className="flex items-center"><Mail className="contact-icon" /><p> {vehicle.sellerEmail}</p></div></div>
                     <div><p className="contact-label">Address</p><p>{vehicle.sellerAddress}</p></div>
                     <button
                       onClick={handleContactClick}

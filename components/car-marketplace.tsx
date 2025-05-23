@@ -10,6 +10,37 @@ import Dashboard from "./dashboard"
 import UploadVehicle from "./upload-vehicle"; // Import the new UploadVehicle component
 import { vehicles } from "@/lib/data"
 import type { Vehicle } from "@/lib/data"
+
+// Common South African car make abbreviations
+const MAKE_ABBREVIATIONS: Record<string, string> = {
+  vw: "Volkswagen",
+  bmw: "BMW",
+  merc: "Mercedes Benz",
+  benz: "Mercedes Benz",
+  toy: "Toyota",
+  ford: "Ford",
+  chev: "Chevrolet",
+  caddy: "Cadillac",
+  audi: "Audi",
+  tata: "Tata Motors",
+  maz: "Mazda",
+  suz: "Suzuki",
+  hyundai: "Hyundai",
+  kia: "Kia",
+  ren: "Renault",
+  nissan: "Nissan",
+  honda: "Honda",
+  opel: "Opel",
+  fiat: "Fiat",
+  jeep: "Jeep",
+  jag: "Jaguar",
+  landy: "Land Rover",
+  lr: "Land Rover",
+  lex: "Lexus",
+  dacia: "Dacia",
+  mini: "MINI",
+  // Add more as needed
+};
 import type { UserProfile } from "@/types/user"; // Import UserProfile from shared types
 import { Header } from "./ui/header"
 import ProfileSettings from "./profile-settings"; // Import ProfileSettings component
@@ -102,34 +133,50 @@ export default function CarMarketplace() {
       return
     }
 
-    const lowerInput = input.toLowerCase()
-    const uniqueSuggestions = new Set<string>()
+    const lowerInput = input.toLowerCase();
+    const uniqueSuggestions = new Set<string>();
 
-    // Use allVehicles for suggestions
+    // Check if input matches an abbreviation
+    const abbrFull = MAKE_ABBREVIATIONS[lowerInput];
+
     allVehicles.forEach((vehicle) => {
-      // Suggest Make
-      if (vehicle.make.toLowerCase().includes(lowerInput)) {
-        uniqueSuggestions.add(vehicle.make)
+      // Suggest Make (with abbreviation support)
+      if (
+        vehicle.make.toLowerCase().includes(lowerInput) ||
+        (abbrFull && vehicle.make.toLowerCase() === abbrFull.toLowerCase())
+      ) {
+        uniqueSuggestions.add(vehicle.make);
       }
       // Suggest Make + Model
-      const modelTerm = `${vehicle.make} ${vehicle.model}`
-      if (modelTerm.toLowerCase().includes(lowerInput)) {
-        uniqueSuggestions.add(modelTerm)
+      const modelTerm = `${vehicle.make} ${vehicle.model}`;
+      if (
+        modelTerm.toLowerCase().includes(lowerInput) ||
+        (abbrFull && modelTerm.toLowerCase().includes(abbrFull.toLowerCase()))
+      ) {
+        uniqueSuggestions.add(modelTerm);
       }
       // Suggest Make + Model + Variant (if variant exists)
       if (vehicle.variant) {
-         const variantTerm = `${vehicle.make} ${vehicle.model} ${vehicle.variant}`
-         if (variantTerm.toLowerCase().includes(lowerInput)) {
-           uniqueSuggestions.add(variantTerm)
-         }
+        const variantTerm = `${vehicle.make} ${vehicle.model} ${vehicle.variant}`;
+        if (
+          variantTerm.toLowerCase().includes(lowerInput) ||
+          (abbrFull && variantTerm.toLowerCase().includes(abbrFull.toLowerCase()))
+        ) {
+          uniqueSuggestions.add(variantTerm);
+        }
       }
-    })
+    });
+
+    // Add abbreviation suggestion if not already present
+    if (abbrFull && !uniqueSuggestions.has(abbrFull)) {
+      uniqueSuggestions.add(abbrFull);
+    }
 
     // Filter out already selected terms
     const filteredSuggestions = [...uniqueSuggestions].filter(s => !selectedTerms.includes(s));
 
-    setSuggestions(filteredSuggestions.slice(0, 5)) // Limit suggestions
-  }
+    setSuggestions(filteredSuggestions.slice(0, 5)); // Limit suggestions
+  };
 
 
   const handleSearchInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -145,10 +192,9 @@ export default function CarMarketplace() {
 
   const handleSearch = () => {
     // Get values from inputs/selects
-    const minPriceInput = document.getElementById("min-price-input") as HTMLInputElement
-    const maxPriceInput = document.getElementById("max-price-input") as HTMLInputElement
-    const locationSelect = document.getElementById("location-select") as HTMLSelectElement; // Get location select
-    // Get additional filter values (ensure IDs match the elements)
+    const minPriceInput = document.getElementById("min-price-input") as HTMLInputElement;
+    const maxPriceInput = document.getElementById("max-price-input") as HTMLInputElement;
+    const locationSelect = document.getElementById("location-select") as HTMLSelectElement;
     const fuelTypeSelect = document.getElementById("fuel-type-select") as HTMLSelectElement;
     const engineCapacitySelect = document.getElementById("engine-capacity-select") as HTMLSelectElement;
     const transmissionSelect = document.getElementById("transmission-select") as HTMLSelectElement;
@@ -161,47 +207,58 @@ export default function CarMarketplace() {
     // Parse values, providing defaults or null
     const minPrice = minPriceInput?.value ? Number.parseInt(minPriceInput.value.replace(/\D/g, "")) : null;
     const maxPrice = maxPriceInput?.value ? Number.parseInt(maxPriceInput.value.replace(/\D/g, "")) : null;
-    const selectedProvinceValue = locationSelect?.value || ""; // Get selected province, default to "" (All)
+    const selectedProvinceValue = locationSelect?.value || "";
 
     const fuelType = fuelTypeSelect?.value || "All";
-    const engineCapacity = engineCapacitySelect?.value || "All"; // Example: "1.6-2.0" or "All"
+    const engineCapacity = engineCapacitySelect?.value || "All";
     const transmission = transmissionSelect?.value || "All";
     const condition = conditionSelect?.value || "All";
     const minYear = minYearSelect?.value ? parseInt(minYearSelect.value) : null;
     const maxYear = maxYearSelect?.value ? parseInt(maxYearSelect.value) : null;
-    // Use replace(/\D/g, '') for mileage to strip non-digits before parsing
     const minMileage = minMileageInput?.value ? parseInt(minMileageInput.value.replace(/\D/g, ''), 10) : null;
     const maxMileage = maxMileageInput?.value ? parseInt(maxMileageInput.value.replace(/\D/g, ''), 10) : null;
 
-    // Combine selected terms for filtering text
-    const searchString = selectedTerms.join(" ").toLowerCase()
+    // Prepare search terms, expanding abbreviations
+    const expandedTerms = selectedTerms.map(term => {
+      const abbr = MAKE_ABBREVIATIONS[term.toLowerCase()];
+      return abbr ? abbr : term;
+    });
+    const searchString = expandedTerms.join(", ").toLowerCase();
 
     // Apply filters
-    const filtered = allVehicles.filter((vehicle) => { // Use allVehicles here
-      // 1. Text Search (Make, Model, Variant)
-      const vehicleText = `${vehicle.make} ${vehicle.model} ${vehicle.variant || ''}`.toLowerCase()
-      const matchesSearch = !searchString || selectedTerms.every(term => vehicleText.includes(term.toLowerCase()));
+    const filtered = allVehicles.filter((vehicle) => {
+      // 1. Text Search (Make, Model, Variant, with abbreviation support)
+      const vehicleText = `${vehicle.make} ${vehicle.model} ${vehicle.variant || ''}`.toLowerCase();
+      // Also build a string with abbreviations for make if available
+      const makeAbbr = Object.entries(MAKE_ABBREVIATIONS).find(([, full]) => full.toLowerCase() === vehicle.make.toLowerCase());
+      const abbrText = makeAbbr ? `${makeAbbr[0]} ${vehicle.model} ${vehicle.variant || ''}`.toLowerCase() : '';
+
+      // OR logic: match if any term matches vehicleText or abbrText
+      const matchesSearch =
+        expandedTerms.length === 0 ||
+        expandedTerms.some(term =>
+          vehicleText.includes(term.toLowerCase()) ||
+          (abbrText && abbrText.includes(term.toLowerCase()))
+        );
 
       // 2. Province Filter
-      const matchesProvince = !selectedProvinceValue || vehicle.province === selectedProvinceValue
+      const matchesProvince = !selectedProvinceValue || vehicle.province === selectedProvinceValue;
 
-      // 3. Body Type Filter (using state `bodyType`)
-      const matchesBodyType = !bodyType || (vehicle.bodyType && vehicle.bodyType === bodyType)
+      // 3. Body Type Filter
+      const matchesBodyType = !bodyType || (vehicle.bodyType && vehicle.bodyType === bodyType);
 
-    // 4. Price Filter
-    // Ensure vehicle.price is treated as a string before calling replace and handle potential null/undefined
-    const vehiclePrice = vehicle.price != null ? Number.parseInt(String(vehicle.price).replace(/\D/g, "")) : NaN;
-    const matchesMinPrice = minPrice === null || isNaN(vehiclePrice) || vehiclePrice >= minPrice
-    const matchesMaxPrice = maxPrice === null || isNaN(vehiclePrice) || vehiclePrice <= maxPrice
+      // 4. Price Filter
+      const vehiclePrice = vehicle.price != null ? Number.parseInt(String(vehicle.price).replace(/\D/g, "")) : NaN;
+      const matchesMinPrice = minPrice === null || isNaN(vehiclePrice) || vehiclePrice >= minPrice;
+      const matchesMaxPrice = maxPrice === null || isNaN(vehiclePrice) || vehiclePrice <= maxPrice;
 
-    // 5. Year Filter
-    const vehicleYear = vehicle.year; // Assuming year is a number
+      // 5. Year Filter
+      const vehicleYear = vehicle.year;
       const matchesMinYear = minYear === null || vehicleYear >= minYear;
       const matchesMaxYear = maxYear === null || vehicleYear <= maxYear;
 
       // 6. Mileage Filter
-      // Ensure vehicle.mileage is treated as a string before calling replace and handle potential null/undefined
-      const vehicleMileage = vehicle.mileage != null ? parseInt(String(vehicle.mileage).replace(/\D/g, ''), 10) : NaN; // Parse mileage as number
+      const vehicleMileage = vehicle.mileage != null ? parseInt(String(vehicle.mileage).replace(/\D/g, ''), 10) : NaN;
       const matchesMinMileage = minMileage === null || isNaN(vehicleMileage) || vehicleMileage >= minMileage;
       const matchesMaxMileage = maxMileage === null || isNaN(vehicleMileage) || vehicleMileage <= maxMileage;
 
@@ -214,27 +271,28 @@ export default function CarMarketplace() {
       // 9. Transmission Filter
       const matchesTransmission = transmission === "All" || vehicle.transmission === transmission;
 
-      // Combine all filters
-      return matchesSearch
-          && matchesProvince
-          && matchesBodyType
-          && matchesMinPrice
-          && matchesMaxPrice
-          && matchesMinYear
-          && matchesMaxYear
-          && matchesMinMileage
-          && matchesMaxMileage
-          && matchesFuelType
-          && matchesEngineCapacity
-          && matchesTransmission;
-    })
+      return (
+        matchesSearch &&
+        matchesProvince &&
+        matchesBodyType &&
+        matchesMinPrice &&
+        matchesMaxPrice &&
+        matchesMinYear &&
+        matchesMaxYear &&
+        matchesMinMileage &&
+        matchesMaxMileage &&
+        matchesFuelType &&
+        matchesEngineCapacity &&
+        matchesTransmission
+      );
+    });
 
-    setFilteredVehicles(filtered)
-    setSearch(searchString || "All Vehicles") // Store the combined search terms used or a default
-    setIsSearchPage(false) // Show results page
-    setShowSuggestions(false) // Hide suggestions after search
-    setShowBodyTypes(false) // Hide body type dropdown
-  }
+    setFilteredVehicles(filtered);
+    setSearch(searchString || "All Vehicles");
+    setIsSearchPage(false);
+    setShowSuggestions(false);
+    setShowBodyTypes(false);
+  };
 
 
   const handleSuggestionClick = (suggestion: string) => {
