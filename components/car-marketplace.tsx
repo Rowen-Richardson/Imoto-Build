@@ -2,6 +2,7 @@
 
 import type React from "react"
 import { useState, useEffect, useRef } from "react"
+import * as SliderPrimitive from "@radix-ui/react-slider";
 import { Search, X, ChevronDown, Truck, CarIcon, Bike, Facebook, Instagram, Twitter } from "lucide-react"
 import VehicleDetails from "./vehicle-details"
 import LocationPage from "./location-page"
@@ -72,9 +73,15 @@ export default function CarMarketplace() {
   const [bodyType, setBodyType] = useState("") // State for selected body type filter
   const [showBodyTypes, setShowBodyTypes] = useState(false) // State for body type dropdown visibility
   const searchRef = useRef<HTMLDivElement>(null)
+  const engineCapacityRef = useRef<HTMLDivElement>(null);
 
   // Track if login was triggered by "Sell a Car"/Upload Vehicle
   const [loginContext, setLoginContext] = useState<'sell' | 'default'>("default");
+
+  // State for Engine Capacity Slider
+  const [engineCapacityRange, setEngineCapacityRange] = useState<[number, number]>([1.0, 8.0]);
+  const [showEngineCapacitySlider, setShowEngineCapacitySlider] = useState(false);
+  const [currentSliderEngineValues, setCurrentSliderEngineValues] = useState<[number, number]>([1.0, 8.0]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -82,8 +89,13 @@ export default function CarMarketplace() {
         setShowSuggestions(false)
         setShowBodyTypes(false) // Also hide body types dropdown
       }
+      if (engineCapacityRef.current && !engineCapacityRef.current.contains(event.target as Node)) {
+        if (showEngineCapacitySlider) { // Only apply if it was open
+          setEngineCapacityRange(currentSliderEngineValues); // Auto-apply
+          setShowEngineCapacitySlider(false);
+        }
+      }
     }
-
     document.addEventListener("mousedown", handleClickOutside)
     return () => {
       document.removeEventListener("mousedown", handleClickOutside)
@@ -195,8 +207,7 @@ export default function CarMarketplace() {
     const minPriceInput = document.getElementById("min-price-input") as HTMLInputElement;
     const maxPriceInput = document.getElementById("max-price-input") as HTMLInputElement;
     const locationSelect = document.getElementById("location-select") as HTMLSelectElement;
-    const fuelTypeSelect = document.getElementById("fuel-type-select") as HTMLSelectElement;
-    const engineCapacitySelect = document.getElementById("engine-capacity-select") as HTMLSelectElement;
+    const fuelTypeSelect = document.getElementById("fuel-type-select") as HTMLSelectElement;    
     const transmissionSelect = document.getElementById("transmission-select") as HTMLSelectElement;
     const conditionSelect = document.getElementById("condition-select") as HTMLSelectElement;
     const minYearSelect = document.getElementById("min-year-select") as HTMLSelectElement;
@@ -210,7 +221,6 @@ export default function CarMarketplace() {
     const selectedProvinceValue = locationSelect?.value || "";
 
     const fuelType = fuelTypeSelect?.value || "All";
-    const engineCapacity = engineCapacitySelect?.value || "All";
     const transmission = transmissionSelect?.value || "All";
     const condition = conditionSelect?.value || "All";
     const minYear = minYearSelect?.value ? parseInt(minYearSelect.value) : null;
@@ -265,8 +275,15 @@ export default function CarMarketplace() {
       // 7. Fuel Type Filter
       const matchesFuelType = fuelType === "All" || vehicle.fuel === fuelType;
 
-      // 8. Engine Capacity Filter
-      const matchesEngineCapacity = engineCapacity === "All" || vehicle.engineCapacity === engineCapacity;
+      // 8. Engine Capacity Filter (New Logic)
+      const parseEngineCapacityToNumber = (ecString: string | undefined): number | null => {
+        if (!ecString) return null;
+        const cleanedString = String(ecString).toUpperCase().replace('L', '');
+        const numericValue = parseFloat(cleanedString);
+        return isNaN(numericValue) ? null : numericValue;
+      };
+      const vehicleEngineLiters = parseEngineCapacityToNumber(vehicle.engineCapacity);
+      const matchesEngineCapacity = vehicleEngineLiters === null || (vehicleEngineLiters >= engineCapacityRange[0] && vehicleEngineLiters <= engineCapacityRange[1]);
 
       // 9. Transmission Filter
       const matchesTransmission = transmission === "All" || vehicle.transmission === transmission;
@@ -303,6 +320,37 @@ export default function CarMarketplace() {
     setSuggestions([])
     setShowSuggestions(false)
   }
+
+  // Helper for Engine Capacity Display
+  const formatEngineCapacityDisplay = (range: [number, number]): string => {
+    if (range[0] === 1.0 && range[1] === 8.0) {
+      return "All";
+    }
+    return `${range[0].toFixed(1)}L - ${range[1].toFixed(1)}L`;
+  };
+
+  const handleApplyEngineCapacity = () => {
+    setEngineCapacityRange(currentSliderEngineValues);
+    setShowEngineCapacitySlider(false);
+  };
+
+  const handleMinEngineInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let newMin = parseFloat(e.target.value);
+    if (isNaN(newMin)) newMin = 1.0;
+    newMin = Math.max(1.0, Math.min(newMin, 8.0));
+    setCurrentSliderEngineValues(prev => [newMin, Math.max(newMin, prev[1])]);
+  };
+  
+  const handleMaxEngineInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let newMax = parseFloat(e.target.value);
+    if (isNaN(newMax)) newMax = 8.0;
+    newMax = Math.min(8.0, Math.max(newMax, 1.0));
+    setCurrentSliderEngineValues(prev => [Math.min(newMax, prev[0]), newMax]);
+  };
+
+  const handleSliderValueChange = (newValues: number[]) => {
+    setCurrentSliderEngineValues(newValues as [number, number]);
+  };
 
   const bodyTypes = [
     { name: "All body types", icon: CarIcon },
@@ -884,15 +932,60 @@ export default function CarMarketplace() {
                       </select>
                     </div>
                     {/* Engine Capacity */}
-                    <div className="flex flex-col">
-                      <label htmlFor="engine-capacity-select" className="mb-1 font-medium text-sm text-[#6F7F69] dark:text-gray-300">Engine Capacity</label>
-                      <select id="engine-capacity-select" className="px-4 py-3 rounded-lg border border-[#9FA791] dark:border-[#4A4D45] focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] bg-white dark:bg-[#2A352A] text-[#3E5641] dark:text-white">
-                        <option value="All">All</option>
-                        <option value="1.0-1.5">1.0L - 1.5L</option>
-                        <option value="1.6-2.0">1.6L - 2.0L</option>
-                        <option value="2.1-3.0">2.1L - 3.0L</option>
-                        <option value="3.1+">3.1L+</option>
-                      </select>
+                    <div className="relative flex flex-col" ref={engineCapacityRef}>
+                      <label className="mb-1 font-medium text-sm text-[#6F7F69] dark:text-gray-300">Engine Capacity</label>
+                      <button
+                        onClick={() => {
+                          setCurrentSliderEngineValues(engineCapacityRange);
+                          setShowEngineCapacitySlider(!showEngineCapacitySlider);
+                        }}
+                        className="w-full px-4 py-3 rounded-lg border border-[#9FA791] dark:border-[#4A4D45] focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] text-left flex justify-between items-center bg-white dark:bg-[#2A352A] text-[#3E5641] dark:text-white"
+                        aria-haspopup="true"
+                        aria-expanded={showEngineCapacitySlider}
+                      >
+                        {formatEngineCapacityDisplay(engineCapacityRange)}
+                        <ChevronDown className={`w-4 h-4 transition-transform ${showEngineCapacitySlider ? 'rotate-180' : ''}`} />
+                      </button>
+
+                      {showEngineCapacitySlider && (
+                        <div className="absolute z-30 mt-1 w-full md:w-[320px] bg-white dark:bg-[#1F2B20] border border-[#9FA791] dark:border-[#4A4D45] rounded-lg shadow-xl p-5 top-full right-0 md:left-0 md:right-auto">
+                          <div className="mb-4 text-center">
+                            <span className="font-bold text-xl text-[#3E5641] dark:text-white">{currentSliderEngineValues[0].toFixed(1)}L</span>
+                            <span className="text-xl text-[#6F7F69] dark:text-gray-400"> - </span>
+                            <span className="font-bold text-xl text-[#3E5641] dark:text-white">{currentSliderEngineValues[1].toFixed(1)}L</span>
+                          </div>
+
+                          <SliderPrimitive.Root
+                            value={currentSliderEngineValues}
+                            onValueChange={handleSliderValueChange}
+                            min={1.0}
+                            max={8.0}
+                            step={0.1}
+                            minStepsBetweenThumbs={0}
+                            className="relative flex w-full touch-none select-none items-center h-10"
+                          >
+                            <SliderPrimitive.Track className="relative h-2 w-full grow overflow-hidden rounded-full bg-[#9FA791]/40 dark:bg-[#4A4D45]/60">
+                              <SliderPrimitive.Range className="absolute h-full bg-[#FF6700] dark:bg-[#FF7D33]" />
+                            </SliderPrimitive.Track>
+                            {[0, 1].map(thumbIndex => (
+                              <SliderPrimitive.Thumb
+                                key={thumbIndex}
+                                aria-label={thumbIndex === 0 ? "Minimum engine capacity" : "Maximum engine capacity"}
+                                className="block h-6 w-6 rounded-full border-2 border-[#FF6700] dark:border-[#FF7D33] bg-white ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6700]/50 dark:focus-visible:ring-[#FF7D33]/50 focus-visible:ring-offset-2 cursor-grab active:cursor-grabbing"
+                              />
+                            ))}
+                          </SliderPrimitive.Root>
+
+                          <div className="mt-5 flex gap-4">
+                            <input id="min-engine-input" type="number" value={currentSliderEngineValues[0].toFixed(1)} onChange={handleMinEngineInputChange} min="1.0" max="8.0" step="0.1" className="w-full px-3 py-2 rounded-md border border-[#9FA791] dark:border-[#4A4D45] bg-white dark:bg-[#2A352A] text-[#3E5641] dark:text-white text-sm focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33]" placeholder="Min L" />
+                            <input id="max-engine-input" type="number" value={currentSliderEngineValues[1].toFixed(1)} onChange={handleMaxEngineInputChange} min="1.0" max="8.0" step="0.1" className="w-full px-3 py-2 rounded-md border border-[#9FA791] dark:border-[#4A4D45] bg-white dark:bg-[#2A352A] text-[#3E5641] dark:text-white text-sm focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33]" placeholder="Max L" />
+                          </div>
+
+                          <button onClick={handleApplyEngineCapacity} className="mt-5 w-full bg-[#FF6700] text-white dark:bg-[#FF7D33] px-4 py-2.5 rounded-lg hover:bg-[#FF6700]/90 dark:hover:bg-[#FF7D33]/90 transition-colors font-medium text-sm">
+                            Apply Range
+                          </button>
+                        </div>
+                      )}
                     </div>
                     {/* Transmission */}
                     <div className="flex flex-col">
