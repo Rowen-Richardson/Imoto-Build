@@ -30,7 +30,8 @@ interface DashboardProps {
   onLoginClick: () => void;
   onGoHome: () => void;
   onShowAllCars: () => void;
-  onGoToSellPage: () => void; 
+  onGoToSellPage: () => void;
+  onNavigateToUpload: () => void;
 }
 
 export default function Dashboard({ user, onSignOut, onBack, savedCars = [], listedCars = [], onViewDetails, onViewProfileSettings, onViewUploadVehicle, onSaveCar, onEditListedCar, onDeleteListedCar, onLoginClick, onGoHome, onShowAllCars, onGoToSellPage }: DashboardProps) {
@@ -100,6 +101,7 @@ export default function Dashboard({ user, onSignOut, onBack, savedCars = [], lis
         onSignOut={onSignOut} // Pass down onSignOut from DashboardProps
         onGoHome={onGoHome} // Pass down the onGoHome prop from Dashboard to LikedCarsPage
         onShowAllCars={onShowAllCars} // Pass down the onShowAllCars prop from Dashboard to LikedCarsPage
+        onNavigateToUpload={onViewUploadVehicle} // Pass the onNavigateToUpload prop
       />
     )
   }
@@ -134,7 +136,10 @@ export default function Dashboard({ user, onSignOut, onBack, savedCars = [], lis
               <div className="grid grid-cols-3 gap-4">
                 {/* Profile Card */}
                 {/* Changed from Link to div with onClick to handle view state in parent */}
-                <div className="col-span-1 block min-w-0" onClick={onViewProfileSettings}>
+                <div
+                  className="col-span-1 block min-w-0"
+                  onClick={onViewProfileSettings}
+                >
                   <Card className="rounded-3xl overflow-hidden w-full h-full transition-transform hover:scale-105 cursor-pointer">
                     <div className="relative w-full h-full">
                       {user.profilePic ? (
@@ -175,13 +180,13 @@ export default function Dashboard({ user, onSignOut, onBack, savedCars = [], lis
                         <Eye className="w-5 h-5 text-[#FF6700]" />
                       </div>
                     </div>
-                    <div className="mb-4 flex items-end gap-2 filter blur-sm"> {/* Added blur */}
-                      <div className="text-3xl font-bold text-[#3E5641]">{userMetrics.totalListings}</div>
+                    <div className="mb-4 flex items-end gap-2 filter blur-sm">
+                      <div className="text-3xl font-bold text-[#3E5641]">{totalListings}</div>
                       <div className="text-lg font-medium text-[#6F7F69] pb-0.5">Total Views</div> {/* Changed to reflect the metric shown */}
                     </div>
                   </div>
 
-                  <div className="space-y-4 filter blur-sm"> {/* Added blur */}
+                  <div className="space-y-4">
                     <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
                       <div className="flex justify-between items-center mb-2">
                         <div className="flex items-center gap-2">

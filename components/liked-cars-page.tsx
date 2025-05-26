@@ -16,28 +16,34 @@ interface LikedCarsPageProps {
   onSignOut?: () => void; // Add onSignOut for Header consistency
   onGoHome: () => void; // Add prop for navigating to home/search form
   onShowAllCars: () => void; // Add prop for navigating to show all cars/results
+  onNavigateToUpload: () => void; // New prop to signal parent to show UploadVehicle component/view
 }
 
-export default function LikedCarsPage({ likedVehicles, onBack, onViewDetails, user, onSignOut, onGoHome, onShowAllCars }: LikedCarsPageProps) {
+export default function LikedCarsPage({ likedVehicles, onBack, onViewDetails, user, onSignOut, onGoHome, onShowAllCars, onNavigateToUpload }: LikedCarsPageProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const router = useRouter();
 
   const filteredVehicles = likedVehicles.filter((vehicle) =>
     `${vehicle.make} ${vehicle.model} ${vehicle.variant}`.toLowerCase().includes(searchTerm.toLowerCase()),
   );
-
   // Navigation handlers
   const handleLogin = () => { router.push('/login'); };
   // Removed internal router.push for GoHome and ShowAllCars, will use props
-  // const handleDashboard, handleGoHome, handleShowAllCars are now handled by props or specific logic
-  const handleGoToSell = () => {
+  const handleGoToSellPage = () => { // Local handler for the "Sell a Car" button
     if (!user) {
-      // Redirect to login with intent to come back to upload
+      // If user is not logged in, redirect to login page.
+      // The component handling the redirect after login (likely the parent of LikedCarsPage
+      // or a top-level router handler) needs to interpret 'next=/upload-vehicle'
+      // as a request to show the UploadVehicle component view, not as a literal
+      // URL navigation if /upload-vehicle is not a defined page route.
       router.push({ pathname: '/login', query: { next: '/upload-vehicle' } } as any);
     } else {
-      router.push('/upload-vehicle');
+      // User is logged in, call the callback provided by the parent
+      // to switch to the upload vehicle component view.
+      onNavigateToUpload();
     }
   };
+  // const handleDashboard, handleGoHome, handleShowAllCars are now handled by props or specific logic
   const handleSignOutClick = () => { // Renamed to avoid conflict
     if (onSignOut) {
       onSignOut(); // Call parent handler if provided
@@ -53,7 +59,7 @@ export default function LikedCarsPage({ likedVehicles, onBack, onViewDetails, us
         onDashboardClick={onBack} // Use the onBack prop to return to the dashboard view
         onGoHome={onGoHome} // Use the prop passed from CarMarketplace
         onShowAllCars={onShowAllCars} // Use the prop passed from CarMarketplace
-        onGoToSellPage={handleGoToSell}
+        onGoToSellPage={handleGoToSellPage}
         onSignOut={handleSignOutClick} // Use the new handler
         transparent={false}
       />

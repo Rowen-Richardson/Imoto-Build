@@ -37,7 +37,7 @@ export default function ProfileSettings({ user, onBack, onSave, onSignOut }: Pro
   };
   const handleGoToSell = () => {
     if (!user) {
-      router.push({ pathname: '/login', query: { next: '/upload-vehicle' } });
+      router.push(new URL('/login?next=/upload-vehicle', window.location.origin).toString());
     } else {
       router.push('/upload-vehicle'); // Navigate to the upload page if logged in
     }
@@ -184,11 +184,13 @@ export default function ProfileSettings({ user, onBack, onSave, onSignOut }: Pro
       setIsSavingPersonal(true)
       setPersonalError(null)
 
-      const updatedProfile: Partial<UserProfile> = { ...formData };
-      // TODO: Handle profile image upload and update here if profileImage state is different from user.profilePic
+      const updatedProfile: Partial<UserProfile> = {
+        ...formData,
+        profilePic: profileImage, // Include profile image in updated profile
+      };
 
       // Call the onSave callback with updated profile data
-      await onSave(formData)
+      await onSave(updatedProfile)
 
       // Optionally show a success message
       alert("Profile updated successfully!")
@@ -253,8 +255,7 @@ export default function ProfileSettings({ user, onBack, onSave, onSignOut }: Pro
                     />
                   ) : (
                     <span className="text-5xl font-bold text-gray-500 dark:text-gray-400 select-none">
-                      {getInitials()}
-
+                      {getInitials(user, formData)}
                     </span>
 
                   )}
@@ -436,7 +437,7 @@ export default function ProfileSettings({ user, onBack, onSave, onSignOut }: Pro
 
                     <div className="flex justify-end pt-4 mt-auto"> {/* Added mt-auto */}
                       <Button
-                        onClick={savePersonalInfo}
+                        onClick={handleSavePersonalInfo}
                         disabled={isSavingPersonal} // Use the correct saving state
                         className="bg-[#FF6700] text-white hover:bg-[#FF6700]/90 dark:bg-[#FF7D33] dark:hover:bg-[#FF7D33]/90"
                       >

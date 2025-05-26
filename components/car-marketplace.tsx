@@ -702,33 +702,34 @@ export default function CarMarketplace() {
 
   if (showDashboard && user) {
     return (
-      <Dashboard
-        user={user} // Pass the full user object state
-        onSignOut={handleSignOut}
-        onBack={() => { // Back from dashboard goes to search results or main page
+        <Dashboard
+          user={user} // Pass the full user object state
+          onSignOut={handleSignOut}
+          onBack={() => { // Back from dashboard goes to search results or main page
             setShowDashboard(false);
             // Go back to the main search page for simplicity
             setIsSearchPage(true);
             // Optionally reset filters or keep last results state
             // setFilteredVehicles(vehicles); // Resetting here
-        }}
-        onUserUpdate={handleUserUpdate} // Pass the update handler
-        onViewProfileSettings={handleViewProfileSettings} // Pass the new handler
-        onViewUploadVehicle={handleViewUploadVehicle} // Pass the new handler for vehicle upload
-        listedCars={userListedCars} // Pass the user's listed cars to the dashboard
-        savedCars={savedCars}
-        onViewDetails={setSelectedVehicle}
-        onEditListedCar={handleEditListedCar} // Pass the edit handler
-        onDeleteListedCar={handleDeleteListedCar} // Pass the delete handler
-        onSaveCar={handleSaveCar} // Ensure this prop is passed correctly
-        // Pass Header navigation props
-        onLoginClick={() => setShowLogin(true)} // Show login page
-        onGoHome={() => { setShowDashboard(false); setIsSearchPage(true); setSelectedVehicle(null); }} // Go to search form, hide dashboard
-        onShowAllCars={() => { setShowDashboard(false); setFilteredVehicles(allVehicles); setIsSearchPage(false); setSelectedVehicle(null); }} // Show all results, hide dashboard
-        onGoToSellPage={handleViewUploadVehicle} // Pass the central handler
-      />
-    )
-  }
+          }}
+          onUserUpdate={handleUserUpdate} // Pass the update handler
+          onViewProfileSettings={handleViewProfileSettings} // Pass the new handler
+          onViewUploadVehicle={handleViewUploadVehicle} // Pass the new handler for vehicle upload
+          listedCars={userListedCars} // Pass the user's listed cars to the dashboard
+          savedCars={savedCars}
+          onViewDetails={setSelectedVehicle}
+          onEditListedCar={handleEditListedCar} // Pass the edit handler
+          onDeleteListedCar={handleDeleteListedCar} // Pass the delete handler
+          onSaveCar={handleSaveCar} // Ensure this prop is passed correctly
+          // Pass Header navigation props
+          onLoginClick={() => setShowLogin(true)} // Show login page
+          onGoHome={() => { setShowDashboard(false); setIsSearchPage(true); setSelectedVehicle(null); }} // Go to search form, hide dashboard
+          onShowAllCars={() => { setShowDashboard(false); setFilteredVehicles(allVehicles); setIsSearchPage(false); setSelectedVehicle(null); }} // Show all results, hide dashboard
+          onGoToSellPage={handleViewUploadVehicle} // Pass the central handler
+          onNavigateToUpload={handleViewUploadVehicle} // Pass the handler to navigate to upload vehicle page
+        />
+      )
+    }
 
   // --- Main Search Page or Results Page ---
   return (
@@ -1106,7 +1107,22 @@ export default function CarMarketplace() {
                   <h4 className="font-semibold mb-4 text-gray-200">Quick Links</h4>
                   <ul className="space-y-2">
                     <li><a href="#" className="text-sm text-gray-300 hover:text-[#FF7D33]">Buy a Car</a></li>
-                    <li><a href="#" className="text-sm text-gray-300 hover:text-[#FF7D33]">Sell a Car</a></li>
+                    <li>
+                      <a
+                        href="components/upload-vehicle.tsx"
+                        className="text-sm text-gray-300 hover:text-[#FF7D33]"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          // Use the same handler as the main "Sell a Car" button
+                          if (typeof window !== 'undefined') {
+                            const sellBtn = document.querySelector('[data-sell-car-btn]');
+                            if (sellBtn) (sellBtn as HTMLElement).click();
+                          }
+                        }}
+                      >
+                        Sell a Car
+                      </a>
+                    </li>
                     <li><a href="#" className="text-sm text-gray-300 hover:text-[#FF7D33]">Value My Car</a></li>
                     <li><a href="#" className="text-sm text-gray-300 hover:text-[#FF7D33]">Car Finance</a></li>
                   </ul>
