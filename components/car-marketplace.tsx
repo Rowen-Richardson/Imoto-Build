@@ -723,8 +723,8 @@ export default function CarMarketplace() {
         onSaveCar={handleSaveCar} // Ensure this prop is passed correctly
         // Pass Header navigation props
         onLoginClick={() => setShowLogin(true)} // Show login page
-        onGoHome={() => setIsSearchPage(true)} // Go back to main search page
-        onShowAllCars={() => { setFilteredVehicles(allVehicles); setIsSearchPage(false); }} // Use allVehicles here
+        onGoHome={() => { setShowDashboard(false); setIsSearchPage(true); setSelectedVehicle(null); }} // Go to search form, hide dashboard
+        onShowAllCars={() => { setShowDashboard(false); setFilteredVehicles(allVehicles); setIsSearchPage(false); setSelectedVehicle(null); }} // Show all results, hide dashboard
         onGoToSellPage={handleViewUploadVehicle} // Pass the central handler
       />
     )

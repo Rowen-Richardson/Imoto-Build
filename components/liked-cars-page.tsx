@@ -14,9 +14,11 @@ interface LikedCarsPageProps {
   onViewDetails: (vehicle: Vehicle) => void;
   user: UserProfile | null; // User can be a UserProfile object or null
   onSignOut?: () => void; // Add onSignOut for Header consistency
+  onGoHome: () => void; // Add prop for navigating to home/search form
+  onShowAllCars: () => void; // Add prop for navigating to show all cars/results
 }
 
-export default function LikedCarsPage({ likedVehicles, onBack, onViewDetails, user, onSignOut }: LikedCarsPageProps) {
+export default function LikedCarsPage({ likedVehicles, onBack, onViewDetails, user, onSignOut, onGoHome, onShowAllCars }: LikedCarsPageProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const router = useRouter();
 
@@ -26,12 +28,8 @@ export default function LikedCarsPage({ likedVehicles, onBack, onViewDetails, us
 
   // Navigation handlers
   const handleLogin = () => { router.push('/login'); };
-  const handleDashboard = () => {
-    if (user) router.push('/dashboard');
-    else router.push('/login');
-  };
-  const handleGoHome = () => { router.push('/'); };
-  const handleShowAllCars = () => { router.push('/'); };
+  // Removed internal router.push for GoHome and ShowAllCars, will use props
+  // const handleDashboard, handleGoHome, handleShowAllCars are now handled by props or specific logic
   const handleGoToSell = () => {
     if (!user) {
       // Redirect to login with intent to come back to upload
@@ -52,9 +50,9 @@ export default function LikedCarsPage({ likedVehicles, onBack, onViewDetails, us
       <Header
         user={user}
         onLoginClick={handleLogin}
-        onDashboardClick={handleDashboard}
-        onGoHome={handleGoHome}
-        onShowAllCars={handleShowAllCars}
+        onDashboardClick={onBack} // Use the onBack prop to return to the dashboard view
+        onGoHome={onGoHome} // Use the prop passed from CarMarketplace
+        onShowAllCars={onShowAllCars} // Use the prop passed from CarMarketplace
         onGoToSellPage={handleGoToSell}
         onSignOut={handleSignOutClick} // Use the new handler
         transparent={false}
@@ -91,7 +89,7 @@ export default function LikedCarsPage({ likedVehicles, onBack, onViewDetails, us
                 {searchTerm ? "No cars match your search criteria" : "You haven't liked any cars yet"}
               </p>
               <button
-                onClick={() => (window.location.href = "/")}
+                onClick={onShowAllCars} // Use the prop to show all cars/results
                 className="bg-[#FF6700] dark:bg-[#FF7D33] text-white px-6 py-3 rounded-lg hover:bg-[#FF6700]/90 dark:hover:bg-[#FF7D33]/90 transition-colors"
               >
                 Browse Vehicles

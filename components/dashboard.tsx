@@ -22,7 +22,7 @@ interface DashboardProps {
   onViewProfileSettings: () => void // Add callback for viewing profile settings
   onViewUploadVehicle: () => void; // Add callback for viewing vehicle upload page
   onUserUpdate: (updatedData: Partial<UserProfile>) => void; // Add onUserUpdate prop
-  onEditListedCar?: (vehicle: Vehicle) => void; // Add callback for editing a listed car
+  onEditListedCar?: (vehicle: Vehicle) => void; // Add callback for editing a listed car // Keep this line
   onDeleteListedCar?: (vehicle: Vehicle) => void; // Add callback for deleting a listed car
   listedCars?: Vehicle[]; // Add listed cars prop for the recently listed section
   onSaveCar?: (vehicle: Vehicle) => void; // Add callback for saving/unsaving cars
@@ -33,7 +33,7 @@ interface DashboardProps {
   onGoToSellPage: () => void; 
 }
 
-export default function Dashboard({ user, onSignOut, onBack, savedCars = [], listedCars = [], onViewDetails, onViewProfileSettings, onViewUploadVehicle, onSaveCar, onEditListedCar, onDeleteListedCar }: DashboardProps) {
+export default function Dashboard({ user, onSignOut, onBack, savedCars = [], listedCars = [], onViewDetails, onViewProfileSettings, onViewUploadVehicle, onSaveCar, onEditListedCar, onDeleteListedCar, onLoginClick, onGoHome, onShowAllCars, onGoToSellPage }: DashboardProps) {
   const [showLikedCarsPage, setShowLikedCarsPage] = useState(false)
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null)
   const [currentCarIndex, setCurrentCarIndex] = useState(0)
@@ -98,7 +98,8 @@ export default function Dashboard({ user, onSignOut, onBack, savedCars = [], lis
         onViewDetails={handleViewDetails}
         user={user}
         onSignOut={onSignOut} // Pass down onSignOut from DashboardProps
-        // For onGoToSellPage, LikedCarsPage defines its own router-based handler.
+        onGoHome={onGoHome} // Pass down the onGoHome prop from Dashboard to LikedCarsPage
+        onShowAllCars={onShowAllCars} // Pass down the onShowAllCars prop from Dashboard to LikedCarsPage
       />
     )
   }
@@ -109,9 +110,9 @@ export default function Dashboard({ user, onSignOut, onBack, savedCars = [], lis
       <Header
         user={user}
         onLoginClick={() => { /* Optionally handle login click in dashboard */ }}
-        onDashboardClick={onBack}
-        onGoHome={() => { /* Optionally handle go home in dashboard */ }}
-        onShowAllCars={() => { /* Optionally handle show all cars in dashboard */ }}
+        onDashboardClick={onBack} // This correctly goes back to the main dashboard view state
+        onGoHome={onGoHome} // Use the prop passed from CarMarketplace
+        onShowAllCars={onShowAllCars} // Use the prop passed from CarMarketplace
         onGoToSellPage={onViewUploadVehicle}
         onSignOut={onSignOut}
         transparent={false}
@@ -346,7 +347,7 @@ export default function Dashboard({ user, onSignOut, onBack, savedCars = [], lis
                           <Car className="w-12 h-12 mx-auto mb-3 opacity-50" />
                           <h3 className="text-xl font-bold mb-1">No Saved Cars</h3>
                           <p className="text-white/80 mb-4">Save cars you're interested in to see them here</p>
-                          <Button className="bg-white text-[#3E5641] hover:bg-white/90" onClick={onBack}>
+                          <Button className="bg-white text-[#3E5641] hover:bg-white/90" onClick={onShowAllCars}>
                             Browse Cars
                           </Button>
                         </div>
