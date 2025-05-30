@@ -35,6 +35,11 @@ interface DashboardProps {
 }
 
 export default function Dashboard({ user, onSignOut, onBack, savedCars = [], listedCars = [], onViewDetails, onViewProfileSettings, onViewUploadVehicle, onSaveCar, onEditListedCar, onDeleteListedCar, onLoginClick, onGoHome, onShowAllCars, onGoToSellPage }: DashboardProps) {
+  // If user is null, show nothing or a fallback (prevents crash)
+  if (!user) {
+    return <div className="min-h-screen flex items-center justify-center text-xl">User not logged in.</div>;
+  }
+
   const [showLikedCarsPage, setShowLikedCarsPage] = useState(false)
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null)
   const [currentCarIndex, setCurrentCarIndex] = useState(0)

@@ -1012,13 +1012,13 @@ export default function UploadVehicle({ user, onBack, onVehicleSubmit, onSavePro
                                     : engineCapacityOptionsList
                                 );
                             }}
-                            placeholder="Type or select capacity"
-                            className="border-[#9FA791] dark:border-[#4A4D45] focus:border-[#FF6700] dark:focus:border-[#FF7D33] focus:ring-[#FF6700] dark:focus:ring-[#FF7D33] dark:bg-[#1F2B20] dark:text-white"
+                            placeholder="Select Capacity"
+                            className="w-full px-3 py-2 rounded-lg border border-[#9FA791] dark:border-[#4A4D45] focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] appearance-none bg-white dark:bg-[#2A352A] text-[#3E5641] dark:text-white"
                             disabled={isSubmitting}
                             autoComplete="off"
                           />
                           {showEngineCapacityDropdown && engineCapacityFiltered.length > 0 && (
-                            <div className="absolute z-10 w-full mt-1 bg-white dark:bg-[#1F2B20] border border-[#9FA791] dark:border-[#4A4D45] rounded-md shadow-lg max-h-60 overflow-y-auto">
+                            <div className="absolute z-10 w-full mt-4 bg-white dark:bg-[#1F2B20] border border-[#9FA791] dark:border-[#4A4D45] rounded-md shadow-lg max-h-60 overflow-y-auto">
                               {engineCapacityFiltered.map((option) => (
                                 <div
                                   key={option.value}
@@ -1052,8 +1052,8 @@ export default function UploadVehicle({ user, onBack, onVehicleSubmit, onSavePro
                                     : bodyTypeOptionsList
                                 );
                             }}
-                            placeholder="Type or select body type"
-                            className="border-[#9FA791] dark:border-[#4A4D45] focus:border-[#FF6700] dark:focus:border-[#FF7D33] focus:ring-[#FF6700] dark:focus:ring-[#FF7D33] dark:bg-[#1F2B20] dark:text-white"
+                            placeholder="Select Body Type"
+                            className="w-full px-5 py-4 rounded-lg border border-[#9FA791] dark:border-[#4A4D45] focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] appearance-none bg-white dark:bg-[#2A352A] text-[#3E5641] dark:text-white"
                             disabled={isSubmitting}
                             autoComplete="off"
                           />

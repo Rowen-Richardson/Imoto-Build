@@ -43,11 +43,12 @@ const MAKE_ABBREVIATIONS: Record<string, string> = {
   // Add more as needed
 };
 import type { UserProfile } from "@/types/user"; // Import UserProfile from shared types
+import { useUser } from "@/components/UserContext";
 import { Header } from "./ui/header"
 import ProfileSettings from "./profile-settings"; // Import ProfileSettings component
 
 // Define the user state type more explicitly, matching UserProfile
-type UserState = UserProfile | null
+
 
 export default function CarMarketplace() {
   const [search, setSearch] = useState("") // Keep track of the search string used for display
@@ -59,7 +60,7 @@ export default function CarMarketplace() {
   const [showProfileSettings, setShowProfileSettings] = useState(false) // New state for Profile Settings
   const [showUploadVehicle, setShowUploadVehicle] = useState(false); // New state for Upload Vehicle page
   const [vehicleToEdit, setVehicleToEdit] = useState<Vehicle | null>(null); // State for the vehicle being edited
-  const [user, setUser] = useState<UserState>(null)
+  const { user, setUser } = useUser();
   const [allVehicles, setAllVehicles] = useState<Vehicle[]>(vehicles); // State to hold all vehicles
   const [userListedCars, setUserListedCars] = useState<Vehicle[]>([]); // State to hold cars listed by the current user
   const [filteredVehicles, setFilteredVehicles] = useState(vehicles)
@@ -459,12 +460,11 @@ export default function CarMarketplace() {
 
 
   // When a user logs in, save their details including login method.
-  const handleLoginSuccess = (userData: UserProfile) => { // Expect UserProfile
-    console.log("Login Success:", userData)
-    setUser(userData) // Store the full user profile
-    setShowLogin(false)
-    setShowDashboard(true) // Go directly to dashboard after login
-    setIsSearchPage(false) // Ensure we are not on the search page background
+  const handleLoginSuccess = (userData: UserProfile) => {
+    setUser(userData);
+    setShowLogin(false);
+    setShowDashboard(true);
+    setIsSearchPage(false);
   }
 
   // Function to update user state from Dashboard/ProfileSettings
@@ -480,12 +480,10 @@ export default function CarMarketplace() {
     });
   }
 
+  // Only call setUser(null) in ProfileSettings, not here
   const handleSignOut = () => {
-    setUser(null)
-    // TODO: Clear any persisted user data (localStorage, etc.)
-    // Example: localStorage.removeItem('userProfile');
-    setShowDashboard(false)
-    setIsSearchPage(true) // Go back to the main search page view
+    setShowDashboard(false);
+    setIsSearchPage(true);
   }
 
   // Add the handleSaveCar function to manage saved cars and pass it to the Dashboard component.
@@ -666,11 +664,11 @@ export default function CarMarketplace() {
         }}
         onCancel={() => setShowLogin(false)}
         loginContext={loginContext}
-        onDashboardClick={() => user ? setShowDashboard(true) : setShowLogin(true)} // Keep existing logic
-        onGoHome={() => setIsSearchPage(true)} // Go back to main search page
-        onShowAllCars={() => { setFilteredVehicles(allVehicles); setIsSearchPage(false); }} // Use allVehicles here
-        onGoToSellPage={handleViewUploadVehicle} // Pass the central handler
-        onSignOut={handleSignOut} // Pass sign out handler
+        onDashboardClick={() => user ? setShowDashboard(true) : setShowLogin(true)}
+        onGoHome={() => setIsSearchPage(true)}
+        onShowAllCars={() => { setFilteredVehicles(allVehicles); setIsSearchPage(false); }}
+        onGoToSellPage={handleViewUploadVehicle}
+        onSignOut={handleSignOut}
       />
     );
   }

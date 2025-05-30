@@ -3,21 +3,11 @@
 import ProfileSettings from "@/components/profile-settings";
 import { useRouter } from "next/navigation";
 import type { UserProfile } from "@/types/user";
+import { useUser } from "@/components/UserContext";
 
 export default function ProfileSettingsClient() {
   const router = useRouter();
-  const user: UserProfile = {
-    id: "1",
-    email: "user@example.com",
-    firstName: "John",
-    lastName: "Doe",
-    profilePic: undefined,
-    loginMethod: "email",
-    phone: "",
-    suburb: "",
-    city: "",
-    province: "",
-  };
+  const { user, setUser } = useUser();
 
   // Header navigation handlers for all main routes
   const handleLogin = () => router.push("/login");
@@ -25,7 +15,11 @@ export default function ProfileSettingsClient() {
   const handleGoHome = () => router.push("/");
   const handleShowAllCars = () => router.push("/car-marketplace");
   const handleGoToSell = () => router.push("/upload-vehicle");
-  const handleSignOut = () => router.push("/login");
+  // This is the ONLY place we clear user state
+  const handleSignOut = () => {
+    setUser(null);
+    router.push("/login");
+  };
 
   return (
     <ProfileSettings

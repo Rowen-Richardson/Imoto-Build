@@ -12,6 +12,7 @@ interface LoginPageProps {
   onLoginSuccess: (userData: UserProfile) => void // Use UserProfile type
   onCancel: () => void
   loginContext?: 'sell' | 'default'
+  next?: string | null
   // Add Header navigation props
   onDashboardClick: () => void;
   onGoHome: () => void;
@@ -20,7 +21,7 @@ interface LoginPageProps {
   onSignOut: () => void;
 }
 
-export default function LoginPage({ onLoginSuccess, onCancel, loginContext, onDashboardClick, onGoHome, onShowAllCars, onGoToSellPage, onSignOut }: LoginPageProps) {
+export default function LoginPage({ onLoginSuccess, onCancel, loginContext, next, onDashboardClick, onGoHome, onShowAllCars, onGoToSellPage, onSignOut }: LoginPageProps) {
   const [isLogin, setIsLogin] = useState(true)
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -58,6 +59,11 @@ export default function LoginPage({ onLoginSuccess, onCancel, loginContext, onDa
 
       // Assuming the user object from the API matches the expected structure for onLoginSuccess
       onLoginSuccess(user)
+      if (next) {
+        window.location.href = next;
+      } else {
+        window.location.href = "/dashboard";
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "An unexpected error occurred")
     } finally {
@@ -68,10 +74,16 @@ export default function LoginPage({ onLoginSuccess, onCancel, loginContext, onDa
   const handleSocialLogin = (provider: string) => {
     // In a real app, this would authenticate with the provider
     // Simulate a successful social login
-    onLoginSuccess({
+    const fakeUser = {
       email: `user@${provider.toLowerCase()}.com`,
       profilePic: "https://via.placeholder.com/40", // Placeholder image
-    })
+    };
+    onLoginSuccess(fakeUser as UserProfile);
+    if (next) {
+      window.location.href = next;
+    } else {
+      window.location.href = "/dashboard";
+    }
   }
 
   return (

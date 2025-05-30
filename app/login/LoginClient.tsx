@@ -1,11 +1,14 @@
 "use client";
 
 import LoginPage from "@/components/login-page";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import type { UserProfile } from "@/types/user";
+import { useUser } from "@/components/UserContext";
 
 export default function LoginClient() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const next = searchParams.get("next");
   // Header navigation handlers for all main routes
   const handleLogin = () => router.push("/login");
   const handleDashboard = () => router.push("/dashboard");
@@ -14,23 +17,19 @@ export default function LoginClient() {
   const handleGoToSell = () => router.push("/upload-vehicle");
   const handleSignOut = () => router.push("/login");
 
-  // Placeholder user for login success
-  const user: UserProfile = {
-    id: "1",
-    email: "user@example.com",
-    firstName: "John",
-    lastName: "Doe",
-    profilePic: undefined,
-    loginMethod: "email",
-    phone: "",
-    suburb: "",
-    city: "",
-    province: "",
-  };
+  const { setUser } = useUser();
 
   return (
     <LoginPage
-      onLoginSuccess={() => router.push("/dashboard")}
+      next={next}
+      onLoginSuccess={(userData) => {
+        setUser(userData);
+        if (next) {
+          router.push(next);
+        } else {
+          router.push("/dashboard");
+        }
+      }}
       onCancel={() => router.push("/")}
       loginContext={"default"}
       onDashboardClick={handleDashboard}

@@ -1,6 +1,7 @@
 import type React from "react"
 import type { Metadata } from "next"
 import { ThemeProvider } from "@/components/theme-provider"
+import { UserProvider } from "@/components/UserContext"
 import "./globals.css"
 
 export const metadata: Metadata = {
@@ -17,7 +18,9 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning={true}>
       <body>
-        <ThemeProvider>{children}</ThemeProvider>
+        <UserProvider>
+          <ThemeProvider>{children}</ThemeProvider>
+        </UserProvider>
       </body>
     </html>
   )
