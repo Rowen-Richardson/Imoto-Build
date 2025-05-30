@@ -1,5 +1,6 @@
-import CarMarketplace from "@/components/car-marketplace"
+import { redirect } from "next/navigation";
 
 export default function Home() {
-  return <CarMarketplace />
+  redirect("/car-marketplace");
+  return null;
 }
