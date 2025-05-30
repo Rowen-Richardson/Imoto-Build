@@ -18,7 +18,7 @@ export default function AboutPage() {
   const handleGoHome = () => router.push("/")
   const handleShowAllCars = () => router.push("/")
   const handleGoToSell = () => {
-    if (!user) router.push({ pathname: "/login", query: { next: "/upload-vehicle" } })
+    if (!user) router.push(`/login?next=/upload-vehicle`)
     else router.push("/upload-vehicle")
   }
   const handleSignOut = () => router.push("/login")

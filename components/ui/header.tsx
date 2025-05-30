@@ -61,8 +61,9 @@ export function Header({
       className={cn(
         "fixed top-4 left-1/2 -translate-x-1/2 z-50 rounded-full px-4 sm:px-6 py-2 max-w-6xl w-[95%] flex items-center justify-between transition-colors duration-300",
         "bg-black text-white shadow-lg", // Always solid black background
-        mobileMenuOpen &&
-          "bg-black text-white rounded-b-none rounded-t-2xl top-0 w-full max-w-none translate-x-0 left-0", // Full width when mobile menu is open
+        mobileMenuOpen
+          ? "bg-black text-white rounded-b-none rounded-t-2xl top-0 w-full max-w-none translate-x-0 left-0" // Full width when mobile menu is open
+          : "",
       )}
     >
       <div className="flex items-center">
