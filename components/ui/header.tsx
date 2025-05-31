@@ -78,7 +78,11 @@ export function Header({
         {" "}
         {/* Centered items */}
         {/* Use buttons for actions */}
-        <button onClick={onShowAllCars} className="hover:text-[#FF6700] transition-colors text-sm font-medium">
+        <button
+          onClick={onShowAllCars}
+          className="hover:text-[#FF6700] transition-colors text-sm font-medium"
+          aria-label="Buy a Car"
+        >
           {user ? "Buy My Dream" : "Buy a Car"}
         </button>
          <button onClick={onGoToSellPage} className="hover:text-[#FF6700] transition-colors text-sm font-medium">
@@ -157,10 +161,11 @@ export function Header({
         <div className="flex flex-col items-center py-6 space-y-5 px-4">
           <button
             onClick={() => {
-              onShowAllCars?.()
-              setMobileMenuOpen(false)
+              onShowAllCars?.();
+              setMobileMenuOpen(false);
             }}
             className="text-white hover:text-[#FF6700] transition-colors text-lg font-medium"
+            aria-label="Buy a Car"
           >
             {user ? "Buy My Dream" : "Buy a Car"}
           </button>

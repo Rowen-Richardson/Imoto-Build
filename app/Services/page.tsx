@@ -5,23 +5,25 @@ import { ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Header } from "@/components/ui/header"
 import { useRouter } from "next/navigation"
-import { useState } from "react"
+import { useUser } from "@/components/UserContext"
 
 export default function ServicesPage() {
-  // Simulate user state (replace with real user state if available)
-  const [user, setUser] = useState(null)
-  const router = useRouter()
+  const { user, setUser } = useUser();
+  const router = useRouter();
 
-  // Navigation handlers
-  const handleLogin = () => router.push("/login")
-  const handleDashboard = () => user ? router.push("/dashboard") : router.push("/login")
-  const handleGoHome = () => router.push("/")
-  const handleShowAllCars = () => router.push("/")
+  // Navigation handlers (match car-marketplace logic)
+  const handleLogin = () => router.push("/login");
+  const handleDashboard = () => user ? router.push("/dashboard") : router.push("/login");
+  const handleGoHome = () => router.push("/car-marketplace");
+  const handleShowAllCars = () => router.push("/car-marketplace");
   const handleGoToSell = () => {
-    if (!user) router.push({ pathname: "/login", query: { next: "/upload-vehicle" } })
-    else router.push("/upload-vehicle")
-  }
-  const handleSignOut = () => router.push("/login")
+    if (!user) router.push("/login");
+    else router.push("/upload-vehicle");
+  };
+  const handleSignOut = () => {
+    setUser(null);
+    router.push("/car-marketplace");
+  };
 
   return (
     <div className="min-h-screen bg-[var(--light-bg)] dark:bg-[var(--dark-bg)]">

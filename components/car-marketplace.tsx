@@ -1104,7 +1104,19 @@ export default function CarMarketplace() {
                 <div>
                   <h4 className="font-semibold mb-4 text-gray-200">Quick Links</h4>
                   <ul className="space-y-2">
-                    <li><a href="#" className="text-sm text-gray-300 hover:text-[#FF7D33]">Buy a Car</a></li>
+                    <li>
+                      <a
+                        href="/car-marketplace"
+                        className="text-sm text-gray-300 hover:text-[#FF7D33]"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setIsSearchPage(true);
+                          window.scrollTo(0, 0);
+                        }}
+                      >
+                        Buy a Car
+                      </a>
+                    </li>
                     <li>
                       <a
                         href="components/upload-vehicle.tsx"
