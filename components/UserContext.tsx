@@ -12,19 +12,9 @@ const UserContext = createContext<UserContextType | undefined>(undefined);
 
 
 export function UserProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<UserProfile | null>(null);
 
-  // On mount, load user from localStorage if present
-  useEffect(() => {
-    const storedUser = typeof window !== "undefined" ? localStorage.getItem("userProfile") : null;
-    if (storedUser) {
-      try {
-        setUser(JSON.parse(storedUser));
-      } catch (e) {
-        setUser(null);
-      }
-    }
-  }, []);
+  const [user, setUser] = useState<UserProfile | null>(null);
+  // Removed auto-login from localStorage. User is only set after explicit login.
 
   // Whenever user changes, update localStorage
   useEffect(() => {

@@ -18,7 +18,7 @@ export default function ProfileSettingsClient() {
   // This is the ONLY place we clear user state
   const handleSignOut = () => {
     setUser(null);
-    router.push("/login");
+    router.push("/car-marketplace");
   };
 
   return (

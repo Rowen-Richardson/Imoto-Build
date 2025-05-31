@@ -1,11 +1,11 @@
 "use client"
 
-import type React from "react"
 
+import type React from "react"
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { Search, Facebook } from "lucide-react"
 import { Header } from "./ui/header" // Import the main Header component
-
 import type { UserProfile } from "./dashboard"; // Import UserProfile type for Header props
 
 interface LoginPageProps {
@@ -30,55 +30,54 @@ export default function LoginPage({ onLoginSuccess, onCancel, loginContext, next
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
 
+  const router = useRouter();
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError("")
-    setIsLoading(true)
+    e.preventDefault();
+    setError("");
+    setIsLoading(true);
 
-    try {
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email, password }),
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.message || "Login failed")
-      }
-
-      const { user, token } = await response.json()
-
-      if (rememberMe) {
-        localStorage.setItem("authToken", token)
-      } else {
-        sessionStorage.setItem("authToken", token)
-      }
-
-      // Assuming the user object from the API matches the expected structure for onLoginSuccess
-      onLoginSuccess(user)
+    // Mock login logic
+    if (email === "justxrow@gmail.com" && password === "2547896314") {
+      const mockUser: UserProfile = {
+        id: "mock-id-1",
+        email: "justxrow@gmail.com",
+        firstName: "Temp",
+        lastName: "User",
+        profilePic: "https://via.placeholder.com/40",
+        loginMethod: "email",
+        phone: "",
+        suburb: "",
+        city: "",
+        province: "",
+      };
+      onLoginSuccess(mockUser);
       if (next) {
-        window.location.href = next;
+        router.push(next);
       } else {
-        window.location.href = "/dashboard";
+        router.push("/dashboard");
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "An unexpected error occurred")
-    } finally {
-      setIsLoading(false)
+    } else {
+      setError("Invalid email or password. Try justxrow@gmail.com / 2547896314");
     }
+    setIsLoading(false);
   }
 
   const handleSocialLogin = (provider: string) => {
     // In a real app, this would authenticate with the provider
-    // Simulate a successful social login
-    const fakeUser = {
-      email: `user@${provider.toLowerCase()}.com`,
-      profilePic: "https://via.placeholder.com/40", // Placeholder image
+    // Simulate a successful social login with temp user details
+    const fakeUser: UserProfile = {
+      id: "temp-social-id",
+      email: "justxrow@gmail.com",
+      firstName: "Temp",
+      lastName: "User",
+      profilePic: "https://via.placeholder.com/40",
+      loginMethod: provider.toLowerCase() as 'google' | 'facebook' | 'apple',
+      phone: "",
+      suburb: "",
+      city: "",
+      province: "",
     };
-    onLoginSuccess(fakeUser as UserProfile);
+    onLoginSuccess(fakeUser);
     if (next) {
       window.location.href = next;
     } else {
