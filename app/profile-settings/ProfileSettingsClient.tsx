@@ -21,11 +21,19 @@ export default function ProfileSettingsClient() {
     router.push("/car-marketplace");
   };
 
+  // Handler to update global user state when profile is saved
+  const handleSaveProfile = async (updatedProfile: Partial<UserProfile>) => {
+    // Merge updated fields into the current user
+    if (!user) return;
+    const newUser = { ...user, ...updatedProfile };
+    setUser(newUser);
+  };
+
   return (
     <ProfileSettings
       user={user}
       onBack={handleDashboard}
-      onSave={async () => {}}
+      onSave={handleSaveProfile}
       onSignOut={handleSignOut}
       HeaderPropsOverride={{
         onLoginClick: handleLogin,

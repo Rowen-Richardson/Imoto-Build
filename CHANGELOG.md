@@ -33,6 +33,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased] - 2025-06-01
 ### Navigation & Routing
+- Refactored `UploadVehicle` to accept and use `HeaderPropsOverride` for navigation, ensuring SPA navigation and user context consistency across all pages.
+- Updated `UploadVehicle` to always use the parent `onVehicleSubmit` handler, so newly uploaded vehicles appear in the "recently listed" card and `/car-marketplace` page immediately after submission.
 - All dashboard card navigation now uses real URLs and Next.js router navigation (`router.push`) for browser/mobile navigation and back/forward support.
 - The "View Saved Cars" card in the dashboard now routes to `/liked-cars-page` using `router.push` instead of local state.
 - All header/login/dashboard navigation in `car-marketplace.tsx` now uses `router.push` to real URLs, removing local state toggling for navigation.

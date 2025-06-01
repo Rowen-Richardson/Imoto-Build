@@ -13,12 +13,22 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Header } from "@/components/ui/header"; // Import Header
 import type { UserProfile } from "@/types/user"
 
+interface HeaderPropsOverride {
+  onLoginClick?: () => void;
+  onDashboardClick?: () => void;
+  onGoHome?: () => void;
+  onShowAllCars?: () => void;
+  onGoToSellPage?: () => void;
+  onSignOut?: () => void;
+}
+
 interface UploadVehicleProps {
   user: UserProfile // User who is uploading
   onBack: () => void // Callback to go back
   onVehicleSubmit: (vehicleData: any) => Promise<void> // Callback to submit vehicle data
   onSaveProfile?: (updatedProfile: Partial<UserProfile>) => Promise<void> // Callback to save profile changes
   onSignOut?: () => void; // Add onSignOut for Header
+  HeaderPropsOverride?: HeaderPropsOverride;
 }
 
 // Generate more granular engine capacity options
@@ -54,29 +64,27 @@ const bodyTypeOptionsList: { value: string; label: string; IconComponent: Elemen
   { value: "Station Wagon", label: "Station Wagon", IconComponent: Car },
 ];
 
-export default function UploadVehicle({ user, onBack, onVehicleSubmit, onSaveProfile }: UploadVehicleProps) {
+export default function UploadVehicle({ user, onBack, onVehicleSubmit, onSaveProfile, onSignOut, HeaderPropsOverride }: UploadVehicleProps) {
   const router = useRouter();
 
-  // Navigation handlers for Header
-  const handleLogin = () => { router.push('/login'); };
-  const handleDashboard = () => {
+  // Navigation handlers for Header, use override if provided
+  const handleLogin = HeaderPropsOverride?.onLoginClick ?? (() => { router.push('/login'); });
+  const handleDashboard = HeaderPropsOverride?.onDashboardClick ?? (() => {
     if (user) router.push('/dashboard');
     else router.push('/login');
-  };
-  const handleGoHome = () => { router.push('/'); };
-  const handleShowAllCars = () => { router.push('/'); };
-  const handleGoToSell = () => {
-    // Already on the sell/upload page, so this might redirect home or do nothing
-    // For now, let's assume it means "go to my listings" or dashboard if already on upload
-    if (user) router.push('/dashboard'); // Or a specific "my listings" page
+  });
+  const handleGoHome = HeaderPropsOverride?.onGoHome ?? (() => { router.push('/'); });
+  const handleShowAllCars = HeaderPropsOverride?.onShowAllCars ?? (() => { router.push('/'); });
+  const handleGoToSell = HeaderPropsOverride?.onGoToSellPage ?? (() => {
+    if (user) router.push('/dashboard');
     else router.push({ pathname: '/login', query: { next: '/upload-vehicle' } } as any);
-  };
-  const handleSignOutClick = () => {
+  });
+  const handleSignOutClick = HeaderPropsOverride?.onSignOut ?? (() => {
     if (onSignOut) {
-      onSignOut(); // Call parent handler if provided (e.g., for global state cleanup)
+      onSignOut();
     }
     router.push('/login');
-  };
+  });
 
   // --- State ---
   const [vehicleImages, setVehicleImages] = useState<string[]>([])

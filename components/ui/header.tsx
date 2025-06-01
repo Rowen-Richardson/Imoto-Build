@@ -56,6 +56,8 @@ export function Header({
     }
   }, [isMobile, mobileMenuOpen])
 
+  // Debug: Log user prop to verify updates
+  console.log('[Header] user:', user);
   return (
     <header
       className={cn(

@@ -59,6 +59,8 @@ export default function Dashboard({ user, onSignOut, onBack, savedCars = [], lis
     }
   };
 
+  // Debug: Log user prop to verify updates
+  console.log('[Dashboard] user:', user);
   // Prepare dynamic user display info
   const userDisplayName = user && (user.firstName && user.lastName)
     ? `${user.firstName} ${user.lastName}`
