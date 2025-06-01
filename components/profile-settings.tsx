@@ -22,6 +22,14 @@ interface ProfileSettingsProps {
 }
 
 export default function ProfileSettings({ user, onBack, onSave, onSignOut }: ProfileSettingsProps) {
+  // Null user guard: prevent rendering if user is null or undefined
+  if (!user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-xl text-gray-500 dark:text-gray-300">
+        User not found or not logged in.
+      </div>
+    );
+  }
   const router = useRouter();
   // Navigation handlers for Header
   const handleLogin = () => { router.push('/login'); };
@@ -204,12 +212,13 @@ export default function ProfileSettings({ user, onBack, onSave, onSignOut }: Pro
 
   // Handler for the Sign Out button click
   const handleSignOutButton = () => {
-    console.log("Attempting sign out...");
-    onSignOut(); // Call the parent handler
-    // The parent component (CarMarketplace) should handle the actual sign-out logic
-    // and potentially the navigation away from the dashboard/settings page.
-    // We don't necessarily need a router.push('/login') here if the parent handles it.
-    // If the parent *doesn't* handle navigation, you might add router.push('/login');
+    // Actively sign out the user and route to /car-marketplace
+    if (typeof window !== 'undefined') {
+      // Remove user from localStorage if used
+      localStorage.removeItem('userProfile');
+    }
+    onSignOut(); // Call parent handler to clear user context
+    router.push('/car-marketplace');
   };
 
   // --- Helpers ---

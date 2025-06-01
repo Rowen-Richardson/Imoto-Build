@@ -79,6 +79,7 @@ All notable changes to this project will be documented in this file.
 
 - **Sign Out**
   - Sign out from profile-settings now routes to `/car-marketplace` instead of `/login`.
+  - Added a null user guard to `ProfileSettings` to prevent runtime errors and TypeError when user is null (e.g., reading 'profilePic').
 
 - **Other**
   - Fixed dashboard and profile settings to always use user context.
