@@ -31,7 +31,14 @@ All notable changes to this project will be documented in this file.
 - Updated the changelog to reflect all recent authentication, navigation, and mock login changes.
 - Ensured all navigation handlers and user guards use the global user context.
 
-## [Unreleased] - 2025-05-30
+## [Unreleased] - 2025-06-01
+### Navigation & Routing
+- All dashboard card navigation now uses real URLs and Next.js router navigation (`router.push`) for browser/mobile navigation and back/forward support.
+- The "View Saved Cars" card in the dashboard now routes to `/liked-cars-page` using `router.push` instead of local state.
+- All header/login/dashboard navigation in `car-marketplace.tsx` now uses `router.push` to real URLs, removing local state toggling for navigation.
+- Ensured all navigation handlers in the dashboard and related components use router navigation, not local state.
+- Confirmed that `/login` is used consistently as the login route in all navigation handlers.
+- Fixed all conditional rendering and return statement issues in `dashboard.tsx` to follow correct React/Next.js patterns (no nested returns, no invalid return locations).
 - Refactored authentication to use a global user context (`UserContext.tsx`) with localStorage persistence for login state across reloads.
 - Wrapped the app in `UserProvider` in `app/layout.tsx` to provide global user state.
 - Updated login/logout/navigation flows to use global user state, matching requirements:
