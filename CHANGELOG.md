@@ -4,7 +4,11 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased] - 2025-05-31
+- Updated all "Buy a Car" and "Buy My Dream" navigation in the header and footer to always route to `/car-marketplace` (main search page), both on desktop and mobile.
+- Ensured the same navigation logic is used in the Services and About pages, so "Buy a Car"/"Buy My Dream" always routes to `/car-marketplace`.
+- Footer "Buy a Car" link now uses the correct navigation logic and does not reload the page.
+- All navigation handlers in these pages use the global user context for login/logout/dashboard, and sign out routes to `/car-marketplace` and clears user state.
+- Navigation experience is now consistent across the app for all "Buy a Car"/"Buy My Dream" actions.
 - Refactored authentication to use a global user context (`UserContext.tsx`) with localStorage persistence for login state across reloads.
 - Wrapped the app in `UserProvider` in `app/layout.tsx` to provide global user state.
 - Updated login/logout/navigation flows to use global user state, matching requirements:
@@ -44,7 +48,7 @@ All notable changes to this project will be documented in this file.
 - (Optional) Refactored other pages/components to use the global user context and added user state guards where appropriate.
 
 
-## [Unreleased] - 2025-05-31
+- All dashboard cards now have a consistent hover effect: they scale up and show a shadow (`hover:scale-105 hover:shadow-lg cursor-pointer`), matching the profile card for a unified interactive experience.
 - **Authentication & User Context**
   - Refactored authentication to use a global user context (`UserContext.tsx`).
   - Removed auto-login from localStorage: user is only set after explicit login.

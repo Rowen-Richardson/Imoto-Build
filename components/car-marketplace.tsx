@@ -2,6 +2,7 @@
 
 import type React from "react"
 import { useState, useEffect, useRef } from "react"
+import { useRouter } from "next/navigation"
 import * as SliderPrimitive from "@radix-ui/react-slider";
 import { Search, X, ChevronDown, Truck, CarIcon, Bike, Facebook, Instagram, Twitter } from "lucide-react"
 import VehicleDetails from "./vehicle-details"
@@ -51,6 +52,7 @@ import ProfileSettings from "./profile-settings"; // Import ProfileSettings comp
 
 
 export default function CarMarketplace() {
+  const router = useRouter();
   const [search, setSearch] = useState("") // Keep track of the search string used for display
   const [showMoreOptions, setShowMoreOptions] = useState(false)
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null)
@@ -550,8 +552,8 @@ export default function CarMarketplace() {
         {/* Pass user state to Header */}
         <Header
           user={user}
-          onLoginClick={() => { setSelectedVehicle(null); setShowLogin(true); }}
-          onDashboardClick={() => user ? setShowDashboard(true) : setShowLogin(true)}
+          onLoginClick={() => router.push('/login')}
+          onDashboardClick={() => user ? router.push('/dashboard') : router.push('/login')}
           onGoHome={() => { setIsSearchPage(true); setSelectedVehicle(null); }}
           onShowAllCars={() => { setFilteredVehicles(allVehicles); setIsSearchPage(false); setSelectedVehicle(null); }}
           onGoToSellPage={() => { setSelectedVehicle(null); handleViewUploadVehicle(); }}
@@ -565,8 +567,8 @@ export default function CarMarketplace() {
             onBack={() => setSelectedProvince(null)}
             user={user}
             // Pass Header navigation props
-            onLoginClick={() => setShowLogin(true)}
-            onDashboardClick={() => { setSelectedProvince(null); user ? setShowDashboard(true) : setShowLogin(true); }}
+            onLoginClick={() => router.push('/login')}
+            onDashboardClick={() => user ? router.push('/dashboard') : router.push('/login')}
             onGoHome={() => setIsSearchPage(true)}
             onShowAllCars={() => { setFilteredVehicles(allVehicles); setIsSearchPage(false); }} // Use allVehicles here
             onGoToSellPage={handleViewUploadVehicle} // Pass the central handler
@@ -720,9 +722,9 @@ export default function CarMarketplace() {
           onDeleteListedCar={handleDeleteListedCar} // Pass the delete handler
           onSaveCar={handleSaveCar} // Ensure this prop is passed correctly
           // Pass Header navigation props
-          onLoginClick={() => setShowLogin(true)} // Show login page
-          onGoHome={() => { setShowDashboard(false); setIsSearchPage(true); setSelectedVehicle(null); }} // Go to search form, hide dashboard
-          onShowAllCars={() => { setShowDashboard(false); setFilteredVehicles(allVehicles); setIsSearchPage(false); setSelectedVehicle(null); }} // Show all results, hide dashboard
+          onLoginClick={() => router.push('/login')} // Show login page
+          onGoHome={() => router.push('/car-marketplace')}
+          onShowAllCars={() => router.push('/car-marketplace')}
           onGoToSellPage={handleViewUploadVehicle} // Pass the central handler
           onNavigateToUpload={handleViewUploadVehicle} // Pass the handler to navigate to upload vehicle page
         />
@@ -734,13 +736,13 @@ export default function CarMarketplace() {
     <div className="min-h-screen bg-[var(--light-bg)] dark:bg-[var(--dark-bg)]">
       <Header
         user={user}
-        onLoginClick={() => setShowLogin(true)}
-        onDashboardClick={() => user ? setShowDashboard(true) : setShowLogin(true)} // Show dashboard if logged in, else login
-        onGoHome={() => setIsSearchPage(true)} // Go back to main search page
-        onShowAllCars={() => { setFilteredVehicles(allVehicles); setIsSearchPage(false); }} // Use allVehicles here
-        onGoToSellPage={handleViewUploadVehicle}
-        onSignOut={handleSignOut} // Pass sign out handler
-        transparent={isSearchPage} // Header is transparent only on the initial search page
+        onLoginClick={() => router.push('/login')}
+        onDashboardClick={() => user ? router.push('/dashboard') : router.push('/login')}
+        onGoHome={() => router.push('/car-marketplace')}
+        onShowAllCars={() => router.push('/car-marketplace')}
+        onGoToSellPage={() => router.push('/upload-vehicle')}
+        onSignOut={handleSignOut}
+        transparent={isSearchPage}
       />
 
       {isSearchPage ? (

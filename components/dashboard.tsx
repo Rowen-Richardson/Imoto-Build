@@ -1,5 +1,6 @@
 "use client"
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import Image from "next/image" // Added for user profile picture
 import Link from "next/link"
 import { Plus, Edit, Eye, Heart, MessageSquare, Car, Package } from "lucide-react"
@@ -35,82 +36,63 @@ interface DashboardProps {
 }
 
 export default function Dashboard({ user, onSignOut, onBack, savedCars = [], listedCars = [], onViewDetails, onViewProfileSettings, onViewUploadVehicle, onSaveCar, onEditListedCar, onDeleteListedCar, onLoginClick, onGoHome, onShowAllCars, onGoToSellPage }: DashboardProps) {
-  // If user is null, show nothing or a fallback (prevents crash)
-  if (!user) {
-    return <div className="min-h-screen flex items-center justify-center text-xl">User not logged in.</div>;
-  }
-
-  const [showLikedCarsPage, setShowLikedCarsPage] = useState(false)
-  const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null)
-  const [currentCarIndex, setCurrentCarIndex] = useState(0)
+  // --- State and hooks ---
+  const router = useRouter();
+  const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
+  const [currentCarIndex, setCurrentCarIndex] = useState(0);
 
   // Auto-rotate carousel
   useEffect(() => {
-    if (savedCars.length <= 1) return
-
+    if (savedCars.length <= 1) return;
     const interval = setInterval(() => {
-      setCurrentCarIndex((current) => (current + 1) % savedCars.length)
-    }, 5000) // Change slide every 5 seconds
-
-    return () => clearInterval(interval)
-  }, [savedCars.length])
+      setCurrentCarIndex((current) => (current + 1) % savedCars.length);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [savedCars.length]);
 
   // Handle viewing vehicle details
   const handleViewDetails = (vehicle: Vehicle) => {
     if (onViewDetails) {
-      onViewDetails(vehicle)
+      onViewDetails(vehicle);
     } else {
-      setSelectedVehicle(vehicle)
+      setSelectedVehicle(vehicle);
     }
-  }
+  };
 
   // Prepare dynamic user display info
-  const userDisplayName = (user.firstName && user.lastName)
+  const userDisplayName = user && (user.firstName && user.lastName)
     ? `${user.firstName} ${user.lastName}`
-    : user.email.split("@")[0];
+    : user?.email?.split("@")[0] || "";
 
-  const userInitials = (
-    (user.firstName?.[0] || "") + (user.lastName?.[0] || "") ||
-    user.email?.[0] || "U" // Fallback to 'U' if email is somehow empty
-  ).toUpperCase();
+  const userInitials = user
+    ? ((user.firstName?.[0] || "") + (user.lastName?.[0] || "") || user.email?.[0] || "U").toUpperCase()
+    : "U";
 
   // User metrics derived from props or other state
   const totalListings = listedCars.length;
   const maxFreeListings = 5; // Assuming 5 is the limit for the free plan
   const freeListingsRemaining = Math.max(0, maxFreeListings - totalListings);
-  const userMetrics = { // Keep other metrics, or make them dynamic if data is available
-    listingViews: 243, // Placeholder, replace with actual data if available
+  const userMetrics = {
+    listingViews: 243, // Placeholder
     saves: 18, // Placeholder
     contacts: 7, // Placeholder
   };
 
+  // --- Top-level conditional returns ---
+  if (!user) {
+    return <div className="min-h-screen flex items-center justify-center text-xl">User not logged in.</div>;
+  }
   if (selectedVehicle) {
     return (
       <VehicleDetails
         vehicle={selectedVehicle}
         onBack={() => setSelectedVehicle(null)}
         user={user}
-        savedCars={savedCars} // Pass the current list of saved cars
-        onSaveCar={onSaveCar} // Pass the handler to update saved cars
+        savedCars={savedCars}
+        onSaveCar={onSaveCar}
       />
     );
   }
-
-  if (showLikedCarsPage) {
-    return (
-      <LikedCarsPage
-        likedVehicles={savedCars}
-        onBack={() => setShowLikedCarsPage(false)}
-        onViewDetails={handleViewDetails}
-        user={user}
-        onSignOut={onSignOut} // Pass down onSignOut from DashboardProps
-        onGoHome={onGoHome} // Pass down the onGoHome prop from Dashboard to LikedCarsPage
-        onShowAllCars={onShowAllCars} // Pass down the onShowAllCars prop from Dashboard to LikedCarsPage
-        onNavigateToUpload={onViewUploadVehicle} // Pass the onNavigateToUpload prop
-      />
-    )
-  }
-
   return (
     <div className="h-screen bg-white flex flex-col">
       {/* Top Header Section */}
@@ -310,7 +292,7 @@ export default function Dashboard({ user, onSignOut, onBack, savedCars = [], lis
                   <div className="relative z-20 h-full flex flex-col justify-between p-6">
                     <div className="flex justify-between">
                       <span
-                        onClick={() => setShowLikedCarsPage(true)}
+                        onClick={() => router.push('/liked-cars-page')}
                         className="bg-[#FF6700] text-white px-3 py-1 rounded-full text-sm cursor-pointer hover:bg-[#FF7D33] transition-colors"
                       >
                         View Saved Cars
@@ -462,5 +444,5 @@ export default function Dashboard({ user, onSignOut, onBack, savedCars = [], lis
         </div>
       </main>
     </div>
-  )
+    );
 }
